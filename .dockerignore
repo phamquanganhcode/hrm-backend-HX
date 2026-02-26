@@ -1,0 +1,18 @@
+# Bỏ qua thư mục Database (Thủ phạm gây lỗi)
+docker/mysql/data
+
+# Bỏ qua các thư viện nặng (Vì Docker sẽ tự chạy composer install)
+/vendor
+/node_modules
+/public/build
+
+# Bỏ qua file môi trường và Git
+.git
+.gitignore
+.env
+
+# Bỏ qua cache
+/storage/logs/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
