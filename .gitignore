@@ -1,0 +1,25 @@
+# --- Docker & Database (Quan trọng nhất lúc này) ---
+docker/mysql/data
+.docker
+
+# --- Laravel Essentials ---
+/vendor
+.env
+.env.backup
+.env.production
+/public/hot
+/public/storage
+/storage/*.key
+/node_modules
+/public/build
+
+# --- Logs & Cache ---
+/storage/logs/
+/storage/framework/cache/data/
+/storage/framework/sessions/
+/storage/framework/testing/
+/storage/framework/views/
+
+# --- Others ---
+.phpunit.result.cache
+.DS_Store

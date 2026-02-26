@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: hrm_database
+    restart: unless-stopped
+    ports:
+      - "3306:3306" # Mở cổng 3306 ra ngoài cho Laravel kết nối
+    environment:
+      MYSQL_DATABASE: hrm_demo         # Tự động tạo sẵn CSDL tên này
+      MYSQL_ROOT_PASSWORD: root_secret # Mật khẩu root (khớp với file .env của bạn)
+    volumes:
+      # Lưu dữ liệu vật lý ra thư mục này để không bị mất khi tắt Docker
+      - ./docker/mysql/data:/var/lib/mysql
