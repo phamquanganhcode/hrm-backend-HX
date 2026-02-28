@@ -9,16 +9,13 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-public function up(): void
-{
-    Schema::create('employees', function (Blueprint $table) {
-        $table->id();
-        $table->string('employee_code')->unique();
-        $table->string('full_name');
-        $table->timestamps();
-        $table->softDeletes();
-    });
-}
+    public function up(): void
+    {
+        Schema::create('employees', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.

@@ -13,12 +13,6 @@ return new class extends Migration
     {
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->nullable(); // Sẽ nối với bảng Employee sau
-            $table->string('username')->unique();
-            $table->string('password');
-            $table->string('role')->default('employee');
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
             $table->timestamps();
         });
     }

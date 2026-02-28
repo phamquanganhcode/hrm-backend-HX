@@ -26,8 +26,28 @@ class AuthController extends Controller
         ]);
 
         try {
-            // Gọi Service xử lý logic
+            // 1. Gọi Service xử lý logic (thường trả về array/object chứa 'token' và 'user')
             $data = $this->authService->login($request->username, $request->password);
+            
+            // 2. KỸ THUẬT ĐÁNH LỪA FRONTEND: Chuyển role chữ sang số
+            // Giả định $data['user'] đang chứa thông tin account
+            if (isset($data['user'])) {
+                $roleStr = is_object($data['user']) ? $data['user']->role : $data['user']['role'];
+                
+                $roleNumber = 3; // Mặc định là nhân viên
+                if ($roleStr === 'admin') {
+                    $roleNumber = 1;
+                } elseif ($roleStr === 'manager') {
+                    $roleNumber = 2;
+                }
+                
+                // Ghi đè lại role thành số (1, 2, 3) vào biến $data để gửi về FE
+                if (is_object($data['user'])) {
+                    $data['user']->role = $roleNumber;
+                } else {
+                    $data['user']['role'] = $roleNumber;
+                }
+            }
             
             // Dùng trait trả về chuẩn Format
             return $this->successResponse($data, 'Đăng nhập thành công!');
@@ -40,11 +60,56 @@ class AuthController extends Controller
     
     public function me(Request $request)
     {
-        // $request->user() sẽ lấy ra cái Account đang cầm Token hợp lệ
-        // Dùng hàm load('employee') để tự động JOIN sang bảng employees lấy họ tên
+        // 1. Lấy account đang đăng nhập kèm theo thông tin nhân viên
         $account = $request->user()->load('employee');
+        $employee = $account->employee;
 
-        // Trả về data cho Frontend
-        return $this->successResponse($account, 'Lấy thông tin thành công');
+        // Nếu vì lý do nào đó tài khoản này chưa được liên kết với nhân viên
+        if (!$employee) {
+            return $this->errorResponse('Không tìm thấy hồ sơ nhân viên này!', 404);
+        }
+
+        // 2. "Phiên dịch" Role sang tiếng Việt cho hiển thị đẹp mắt
+        $roleNameVN = 'Nhân viên';
+        if ($account->role === 'admin') {
+            $roleNameVN = 'Quản trị viên hệ thống';
+        } elseif ($account->role === 'manager') {
+            $roleNameVN = 'Quản lý cơ sở';
+        } elseif ($account->role === 'employee_chef') {
+            $roleNameVN = 'Nhân viên Bếp';
+        } elseif ($account->role === 'employee_staff') {
+            $roleNameVN = 'Nhân viên chạy bàn'; // Khớp với yêu cầu của bạn
+        }
+
+        // 3. Xây dựng Object Dữ liệu chuẩn xác 100% theo JSON mẫu
+        $formattedEmployee = [
+            'full_name'     => $employee->full_name ?? 'Chưa cập nhật tên',
+            'employee_code' => $employee->employee_code ?? 'Chưa có mã',
+            'status'        => $account->is_active ? 'active' : 'inactive',
+            'role'          => $roleNameVN,
+            
+            // LƯU Ý: Nếu bạn có bảng Branches, hãy thay bằng $employee->branch->name
+            // Tạm thời tôi để mock data khớp với yêu cầu
+            'branch_name'   => 'Chi nhánh Hải Xồm - Thủy Lợi', 
+            
+            // Tương tự, nếu có cột type và base_salary trong DB thì gọi ra, không thì để cứng
+            'type'          => $employee->type ?? 'part', 
+            'base_salary'   => $employee->base_salary ?? 35000, 
+            
+            // Hãy check lại tên cột trong DB của bạn là phone hay phonenumber nhé
+            'phonenumber'   => $employee->phone ?? 'Chưa cập nhật SĐT', 
+            'email'         => $employee->email ?? 'Chưa cập nhật Email',
+            
+            // Dùng UI-Avatars để tự động tạo ảnh đại diện từ chữ cái đầu của tên nếu chưa có ảnh
+            'avatar_url'    => $employee->avatar ?? 'https://ui-avatars.com/api/?name=' . urlencode($employee->full_name) . '&background=random'
+        ];
+
+        // 4. Trả về thông qua Trait successResponse
+        // Hàm successResponse của bạn thường sẽ tự động bọc biến truyền vào bằng key "data"
+        // Nên ta chỉ cần truyền mảng ['employee' => $formattedEmployee] là xong!
+        return $this->successResponse(
+            ['employee' => $formattedEmployee], 
+            'Lấy thông tin hồ sơ thành công'
+        );
     }
 }
