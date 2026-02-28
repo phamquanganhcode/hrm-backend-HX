@@ -62,15 +62,15 @@ class AuthController extends Controller
     }
     public function me(Request $request)
     {
-        // 1. Lấy account đang đăng nhập kèm theo thông tin nhân viên
-        $account = $request->user()->load('employee');
+        // 1. TẢI CẢ THÔNG TIN NHÂN VIÊN VÀ THÔNG TIN CHI NHÁNH (Kết nối 2 bảng)
+        $account = $request->user()->load('employee.branch');
         $employee = $account->employee;
 
         if (!$employee) {
             return $this->errorResponse('Không tìm thấy hồ sơ nhân viên này!', 404);
         }
 
-        // 2. "Phiên dịch" Role sang tiếng Việt
+        // 2. Phiên dịch Role
         $roleNameVN = 'Nhân viên';
         if ($account->role === 'admin') {
             $roleNameVN = 'Quản trị viên hệ thống';
@@ -82,27 +82,23 @@ class AuthController extends Controller
             $roleNameVN = 'Nhân viên chạy bàn';
         }
 
-        // 3. Xây dựng Object Dữ liệu KHỚP 100% JSON MỚI
+        // 3. Xây dựng Object Dữ liệu
         $formattedEmployee = [
             'full_name'     => $employee->full_name ?? 'Chưa cập nhật tên',
             'employee_code' => $employee->employee_code ?? 'Chưa có mã',
             'status'        => $account->is_active ? 'active' : 'inactive',
             'role'          => $roleNameVN,
             
-            // Đã đổi thành branch_id theo đúng format JSON của bạn
-            'branch_id'     => $employee->branch_id ?? '001', 
+            // ✅ LẤY TÊN CƠ SỞ TỪ BẢNG BRANCHES (Thay vì trả về branch_id)
+            'branch_name'   => $employee->branch ? $employee->branch->name : 'Chưa cập nhật cơ sở', 
             
             'type'          => $employee->type ?? 'part', 
             'base_salary'   => $employee->base_salary ?? 35000, 
-            
-            // Đã sửa lại tên cột cho khớp Migration (phonenumber và avatar_url)
             'phonenumber'   => $employee->phonenumber ?? 'Chưa cập nhật SĐT', 
             'email'         => $employee->email ?? 'Chưa cập nhật Email',
             'avatar_url'    => $employee->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($employee->full_name) . '&background=random'
         ];
 
-        // 4. Trả về thông qua Trait successResponse
-        // successResponse sẽ tự động bọc mảng này bằng key "data" và "status": "success"
         return $this->successResponse(
             ['employee' => $formattedEmployee], 
             'Lấy thông tin hồ sơ thành công'
