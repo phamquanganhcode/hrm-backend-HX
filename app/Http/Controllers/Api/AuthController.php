@@ -26,34 +26,37 @@ class AuthController extends Controller
         ]);
 
         try {
-            // 1. Gọi Service xử lý logic (thường trả về array/object chứa 'token' và 'user')
-            $data = $this->authService->login($request->username, $request->password);
+            // 1. Gọi Service xử lý logic
+            $result = $this->authService->login($request->username, $request->password);
             
-            // 2. KỸ THUẬT ĐÁNH LỪA FRONTEND: Chuyển role chữ sang số
-            // Giả định $data['user'] đang chứa thông tin account
-            if (isset($data['user'])) {
-                $roleStr = is_object($data['user']) ? $data['user']->role : $data['user']['role'];
-                
-                $roleNumber = 3; // Mặc định là nhân viên
-                if ($roleStr === 'admin') {
-                    $roleNumber = 1;
-                } elseif ($roleStr === 'manager') {
-                    $roleNumber = 2;
-                }
-                
-                // Ghi đè lại role thành số (1, 2, 3) vào biến $data để gửi về FE
-                if (is_object($data['user'])) {
-                    $data['user']->role = $roleNumber;
-                } else {
-                    $data['user']['role'] = $roleNumber;
-                }
+            // Lấy thông tin tài khoản từ kết quả trả về của Service
+            // (Tùy vào cách bạn viết trong Service, nó có thể là $result['account'] hoặc $result['user'])
+            $account = isset($result['account']) ? $result['account'] : auth()->user();
+            
+            // 2. ÉP KIỂU ROLE: Từ chữ sang SỐ 1, 2, 3 cho Frontend hiểu
+            $roleNumber = 3; // Mặc định là nhân viên
+            if ($account->role === 'admin') {
+                $roleNumber = 1;
+            } elseif ($account->role === 'manager') {
+                $roleNumber = 2;
             }
+
+            // 3. XÂY DỰNG MẢNG CHUẨN XÁC 100% THEO YÊU CẦU CỦA FE
+            // FE cần response.token và response.user.role
+            $formattedData = [
+                'token' => $result['token'] ?? '', 
+                'user'  => [             // Bắt buộc key này phải tên là 'user', không được để 'account'
+                    'id'       => $account->id,
+                    'username' => $account->username,
+                    'role'     => $roleNumber, 
+                    'name'     => $account->employee->full_name ?? 'Chưa cập nhật tên',
+                ]
+            ];
             
-            // Dùng trait trả về chuẩn Format
-            return $this->successResponse($data, 'Đăng nhập thành công!');
+            // Trả về dữ liệu đã được Format
+            return $this->successResponse($formattedData, 'Đăng nhập thành công!');
             
         } catch (Exception $e) {
-            // Bắt lỗi từ Service và trả về
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
     }
