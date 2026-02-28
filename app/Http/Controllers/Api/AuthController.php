@@ -53,7 +53,7 @@ class AuthController extends Controller
             ];
             
             // 4. Trả về cho FE
-            return $this->successResponse($formattedData, 'Đăng nhập thành công!');
+            return response()->json($formattedData, 200);
             
         } catch (Exception $e) {
             // Bắt lỗi từ Service và trả về
