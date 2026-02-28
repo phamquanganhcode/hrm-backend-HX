@@ -36,8 +36,8 @@ class DatabaseSeeder extends Seeder
         // Nhân viên Chạy bàn (Đúng format bạn yêu cầu)
         $staff = Employee::create([
             'employee_code' => '0001',
-            'full_name'     => 'Nguyễn Văn Trường',
-            'email'         => 'truongnv@haixom.com',
+            'full_name'     => 'Nguyễn Văn Bàn',
+            'email'         => 'bannv82@haixom.com',
             'phonenumber'   => '0987654321',
             'avatar_url'    => 'https://i.pravatar.cc/150?u=truong',
             'role'          => 'employee_staff',
