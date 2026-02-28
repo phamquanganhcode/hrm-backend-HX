@@ -26,6 +26,15 @@ class DatabaseSeeder extends Seeder
             'employee_code' => 'NV_STAFF',
             'full_name' => 'Lê Nhân Viên',
         ]);
+        $chefEmp = Employee::create([
+            'employee_code' => 'NV_BEP',
+            'full_name' => 'Nguyễn Đầu Bếp',
+        ]);
+
+        $waiterEmp = Employee::create([
+            'employee_code' => 'NV_BAN',
+            'full_name' => 'Trần Phục Vụ',
+        ]);
 
         // 2. Tạo 3 tài khoản đăng nhập (Mật khẩu: 123 theo đúng UI Frontend)
         Account::create([
@@ -49,6 +58,20 @@ class DatabaseSeeder extends Seeder
             'username' => 'nhanvien',
             'password' => Hash::make('123'),
             'role' => 'employee', // Quyền Nhân viên thường
+            'is_active' => true,
+        ]);
+        Account::create([
+            'employee_id' => $chefEmp->id,
+            'username' => 'nhanvienbep',
+            'password' => Hash::make('123'),
+            'role' => 'employee_chef', // Quyền Nhân viên bep
+            'is_active' => true,
+        ]);
+        Account::create([
+            'employee_id' => $waiterEmp->id,
+            'username' => 'nhanvienban',
+            'password' => Hash::make('123'),
+            'role' => 'employee_staff', // Quyền Nhân viên phuc vu
             'is_active' => true,
         ]);
     }
