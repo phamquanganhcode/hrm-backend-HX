@@ -6,12 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
-            // Khóa ngoại trỏ sang employee (Xóa nhân viên thì bay luôn tài khoản)
-            $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade'); 
+            $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade');
             $table->string('username')->unique();
             $table->string('password');
             $table->string('role');
@@ -21,6 +23,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('accounts');

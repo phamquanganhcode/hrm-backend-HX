@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('employees', function (Blueprint $table) {
@@ -15,20 +18,20 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phonenumber')->nullable();
             $table->string('avatar_url')->nullable();
-            $table->string('fingerprint_id')->nullable(); // ID vân tay
-            $table->string('role')->nullable(); // Vai trò theo ERD
-            $table->unsignedBigInteger('branch_id')->nullable(); // Nơi làm việc
-            $table->enum('type', ['full', 'part'])->default('full'); // full / part - time
+            $table->string('fingerprint_id')->nullable();
+            $table->string('role');
+            $table->foreignId('branch_id')->nullable()->constrained('branches');
+            $table->string('type')->default('part'); // full hoặc part
             $table->decimal('base_salary', 15, 2)->nullable();
             $table->string('status')->default('active');
             $table->timestamps();
             $table->softDeletes();
-            
-            // Khóa ngoại liên kết sang bảng branches
-            $table->foreign('branch_id')->references('id')->on('branches')->onDelete('set null');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('employees');
