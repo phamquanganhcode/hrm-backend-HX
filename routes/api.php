@@ -19,6 +19,12 @@ Route::prefix('v1')->group(function () {
             
             // API Lịch làm việc (Mở khóa dòng này, bỏ dấu // đi)
             Route::get('/work-schedules', [AttendanceController::class, 'getWeeklySchedule']);
+            
+            // API Lấy danh sách ngày & ca trống cho Modal Đăng ký
+            Route::get('/work-schedules/registration-config', [AttendanceController::class, 'getRegistrationConfig']);
+
+            // API Lưu thẳng lịch làm việc do nhân viên tự chọn
+            Route::post('/work-schedules/register', [AttendanceController::class, 'registerShifts']);
         });
 
 });
