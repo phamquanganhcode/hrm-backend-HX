@@ -43,10 +43,10 @@ class EmployeeSeeder extends Seeder
             'type' => 'part', 'base_salary' => 35000, 'status' => 'active',
         ]);
 
-        // 2. Tạo 50 nhân viên ảo (Bỏ phần tạo Account ở đây)
-        Employee::factory(50)->create()->each(function ($employee) {
-            LaborContract::factory()->create(['employee_id' => $employee->id]);
-            JobHistory::factory(rand(1, 2))->create(['employee_id' => $employee->id]);
-        });
+        // // 2. Tạo 50 nhân viên ảo (Bỏ phần tạo Account ở đây)
+        // Employee::factory(50)->create()->each(function ($employee) {
+        //     LaborContract::factory()->create(['employee_id' => $employee->id]);
+        //     JobHistory::factory(rand(1, 2))->create(['employee_id' => $employee->id]);
+        // });
     }
 }
