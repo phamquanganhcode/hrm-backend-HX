@@ -7,7 +7,7 @@ class BranchFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => 'Chi nhánh ' . $this->faker->unique()->city(),
+            'name' => $this->faker->unique()->company(),
             'address' => $this->faker->streetAddress(),
         ];
     }
