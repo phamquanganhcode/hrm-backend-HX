@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable; // Đổi extends
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Chuẩn ở đây!
 
 class Account extends Authenticatable
 {
+
+    use HasFactory; // Model cầm "chìa khóa" này thì mới mở được Factory
     use HasApiTokens, SoftDeletes;
 
     protected $fillable = ['employee_id', 'username', 'password', 'role', 'is_active'];

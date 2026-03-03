@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Artisan;
+use App\Http\Controllers\Api\AttendanceController;
 
 Route::prefix('v1')->group(function () {
     
@@ -12,10 +13,13 @@ Route::prefix('v1')->group(function () {
     });
 
     // Nhóm Private (Bắt buộc phải có Token)
-    Route::middleware('auth:sanctum')->group(function () {
-        // Sau này nhét API danh sách nhân viên, v.v. vào đây
-        Route::get('/auth/me', [AuthController::class, 'me']);
-    });
+        Route::middleware('auth:sanctum')->group(function () {
+            // API Profile
+            Route::get('/auth/me', [AuthController::class, 'me']);
+            
+            // API Lịch làm việc (Mở khóa dòng này, bỏ dấu // đi)
+            Route::get('/work-schedules', [AttendanceController::class, 'getWeeklySchedule']);
+        });
 
 });
 
