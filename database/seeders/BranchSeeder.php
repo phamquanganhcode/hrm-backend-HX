@@ -12,6 +12,6 @@ class BranchSeeder extends Seeder
         Branch::create(['name' => 'Chi nhánh Cầu Giấy', 'address' => '123 Xuân Thủy, Cầu Giấy']);
         Branch::create(['name' => 'Chi nhánh Hoàng Mai', 'address' => '456 Thúy Lĩnh, Hoàng Mai']);
         // Tạo thêm 5 chi nhánh ảo
-        \App\Models\Branch::factory(5)->create();
+        // \App\Models\Branch::factory(5)->create();
     }
 }
