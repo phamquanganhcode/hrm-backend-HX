@@ -23,7 +23,7 @@ return [
 
     // 3. Danh sách các "Khách VIP" được phép vào lấy dữ liệu (Vercel và Local của bạn)
     'allowed_origins' => [
-        'https://frontend-hr-hai-xom-v2.vercel.app',
+        'https://frontend-hr-hai-xom.vercel.app',
         'http://localhost:5173',
     ],
 
