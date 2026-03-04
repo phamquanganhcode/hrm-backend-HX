@@ -56,40 +56,75 @@ class AttendanceController extends Controller
         return response()->json($formattedSchedules, 200);
     }
     // 1. HÀM TRẢ VỀ CẤU HÌNH CHO MODAL (Hiện danh sách Thứ, Ngày, Ca)
-    public function getRegistrationConfig(Request $request)
-    {
-        $dateParam = $request->query('date', Carbon::now()->addWeek()->toDateString());
-        $startOfWeek = Carbon::parse($dateParam)->startOfWeek();
-
-        // Nặn danh sách 7 ngày
-        $realDays = [];
-        $weekDays = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-        for ($i = 0; $i < 7; $i++) {
-            $currentDay = $startOfWeek->copy()->addDays($i);
-            $realDays[] = [
-                'date' => $currentDay->format('Y-m-d'),
-                'label' => $weekDays[$currentDay->dayOfWeek]
-            ];
-        }
-
-        // Nặn danh sách Ca từ Database
-        $shifts = ShiftDefinition::where('is_active', true)->get();
-        $realShiftTypes = $shifts->map(function($s) {
-            return [
-                'id' => $s->name, 
-                'time' => $s->fe_time_format
-            ];
-        });
-
-        return response()->json([
-            'weekRange' => $startOfWeek->format('d/m/Y') . ' - ' . $startOfWeek->copy()->endOfWeek()->format('d/m/Y'),
-            'realDays' => $realDays,
-            'realShiftTypes' => $realShiftTypes,
-            'shiftDemands' => [], // Bỏ qua nếu cho phép tự do đăng ký
-            'fixedOffShifts' => [] 
-        ], 200);
+public function getRegistrationConfig(Request $request)
+{
+    $employeeId = $request->user()->employee_id;
+    $date = $request->query('date', now()->addWeek()->startOfWeek()->toDateString());
+    
+    // 1. Lấy danh sách 7 ngày của tuần cần đăng ký
+    $startOfWeek = \Carbon\Carbon::parse($date)->startOfWeek();
+    $displayDays = [];
+    for ($i = 0; $i < 7; $i++) {
+        $currentDay = $startOfWeek->copy()->addDays($i);
+        $displayDays[] = [
+            'label' => 'Thứ ' . ($i + 2 == 8 ? 'Nhật' : $i + 2),
+            'date' => $currentDay->toDateString()
+        ];
     }
 
+    // 2. Lấy 5 ca làm việc (Sáng, Trưa, Chiều, Tối, Gãy)
+    $shiftTypes = \App\Models\ShiftDefinition::where('is_active', true)
+        ->get(['id', 'name', 'start_time', 'end_time']);
+
+    // 3. Tính toán shiftDemands (Định mức & Đã đăng ký)
+    $shiftDemands = [];
+    foreach ($displayDays as $day) {
+        foreach ($shiftTypes as $shift) {
+            // Đếm số người ĐÃ đăng ký ca này trong DB
+            $registeredCount = \App\Models\ShiftRegistration::where('request_date', $day['date'])
+                ->where('shift_id', $shift->id)
+                ->count();
+            
+            // Giả định số người CẦN (Required). Bạn có thể lấy từ 1 bảng config hoặc để mặc định là 5
+            $requiredCount = 5; 
+
+            $shiftDemands[$day['date']][$shift->name] = [
+                'registered' => $registeredCount,
+                'required' => $requiredCount
+            ];
+        }
+    }
+
+    // 4. Tính toán fixedOffShifts (Ca bị khóa của nhân viên này)
+    $fixedOffShifts = [];
+    $employeeSchedules = \App\Models\EmployeeSchedule::where('employee_id', $employeeId)
+        ->where('status', 'Active')
+        ->get();
+
+    foreach ($displayDays as $day) {
+        $dayOfWeek = \Carbon\Carbon::parse($day['date'])->dayOfWeekIso; // 1=Thứ 2... 7=Chủ Nhật
+        
+        foreach ($employeeSchedules as $schedule) {
+            if ($schedule->day_of_week == $dayOfWeek) {
+                if (!isset($fixedOffShifts[$day['date']])) {
+                    $fixedOffShifts[$day['date']] = [];
+                }
+                // Thêm tên ca bị khóa vào mảng
+                $fixedOffShifts[$day['date']][] = $schedule->shift->name;
+            }
+        }
+    }
+
+    return response()->json([
+        'weekRange' => $displayDays[0]['date'] . ' - ' . $displayDays[6]['date'],
+        'realDays' => $displayDays,
+        'realShiftTypes' => $shiftTypes->map(function($s) {
+            return ['id' => $s->name, 'time' => \Carbon\Carbon::parse($s->start_time)->format('H:i') . ' - ' . \Carbon\Carbon::parse($s->end_time)->format('H:i')];
+        }),
+        'shiftDemands' => (object)$shiftDemands, // Ép kiểu object để JSON trả về {} thay vì []
+        'fixedOffShifts' => (object)$fixedOffShifts
+    ]);
+}
     public function getMyRegistrations(Request $request)
     {
         $employeeId = $request->user()->employee_id; // Lấy mã nhân viên đang đăng nhập
