@@ -16,6 +16,14 @@ class ShiftDefinition extends Model
     // Tự động đính kèm fe_time_format mỗi khi gọi API
     protected $appends = ['fe_time_format'];
 
+    protected $fillable = [
+        'name', 
+        'start_time', 
+        'end_time', 
+        // 'fe_time_format', // 👉 Nhớ thêm dòng này vào!
+        'is_active'
+    ];
+
     // Liên kết: 1 Ca làm có thể được xếp nhiều lần trong bảng Phân ca
     public function workSchedules()
     {

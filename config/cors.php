@@ -23,8 +23,9 @@ return [
 
     // 3. Danh sách các "Khách VIP" được phép vào lấy dữ liệu (Vercel và Local của bạn)
     'allowed_origins' => [
-        'https://frontend-hr-hai-xom.vercel.app',
-        'http://localhost:5173',
+        '*', // Cho phép tất cả các nguồn (bỏ dòng này nếu bạn chỉ muốn cho phép 1 số nguồn nhất định)
+        // 'https://frontend-hr-hai-xom.vercel.app',
+        // 'http://localhost:5173',
     ],
 
     'allowed_origins_patterns' => [],

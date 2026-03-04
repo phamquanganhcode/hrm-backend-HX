@@ -24,6 +24,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/shifts/definitions', [AttendanceController::class, 'getRegistrationConfig']);
             // API Lưu thẳng lịch làm việc do nhân viên tự chọn
             Route::post('/shift-registrations', [AttendanceController::class, 'registerShifts']);
+            // Lấy danh sách ca đã đăng ký của user đang đăng nhập
+            Route::get('/shift-registrations/me', [AttendanceController::class, 'getMyRegistrations']);
         });
 
 });

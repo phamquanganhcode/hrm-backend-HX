@@ -60,11 +60,10 @@ class AuthController extends Controller
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
     }
+
     public function me(Request $request)
     {
-        // 1. DÙNG EAGER LOADING "LẤY TRỌN GÓI" (Tương đương lệnh JOIN của bạn)
-        // Lấy Nhân viên -> Lấy Chi nhánh hiện tại
-        // Đồng thời lấy luôn mảng Lịch sử công tác -> Kèm theo Chi nhánh và Vị trí của từng lịch sử
+        // 1. DÙNG EAGER LOADING "LẤY TRỌN GÓI"
         $account = $request->user()->load([
             'employee.branch', 
             'employee.jobHistories.branch', 
@@ -77,7 +76,7 @@ class AuthController extends Controller
             return $this->errorResponse('Không tìm thấy hồ sơ nhân viên này!', 404);
         }
 
-        // 2. Phiên dịch Role
+        // 2. Phiên dịch Role hiển thị cho Giao diện (Tiếng Việt)
         $roleNameVN = 'Nhân viên';
         if ($account->role === 'admin') {
             $roleNameVN = 'Quản trị viên hệ thống';
@@ -89,36 +88,44 @@ class AuthController extends Controller
             $roleNameVN = 'Nhân viên chạy bàn';
         }
 
-        // 3. XỬ LÝ MẢNG LỊCH SỬ CÔNG TÁC (Map dữ liệu chuẩn JSON FE yêu cầu)
+        // 👉 3. LOGIC XỬ LÝ PHÂN LOẠI FULL-TIME / PART-TIME CHO ĐĂNG KÝ CA
+        // Lấy giá trị trong DB, chuẩn hóa thành chữ thường để so sánh cho an toàn
+        $dbType = strtolower($employee->type ?? 'part');
+        // Nếu trong DB có chứa chữ 'full' (vd: full-time, full, Full-Time) thì gán là 'full', ngược lại là 'part'
+        $employmentType = str_contains($dbType, 'full') ? 'full' : 'part';
+
+        // 4. XỬ LÝ MẢNG LỊCH SỬ CÔNG TÁC
         $formattedJobHistory = $employee->jobHistories->map(function($history) {
             return [
                 'id'            => $history->id,
                 'start_date'    => $history->start_date,
-                'end_date'      => $history->end_date, // Sẽ tự động là null nếu rỗng
+                'end_date'      => $history->end_date, 
                 'branch_name'   => $history->branch ? $history->branch->name : 'Chi nhánh chưa xác định',
                 'position_name' => $history->position ? $history->position->name : 'Vị trí chưa xác định',
             ];
         })->toArray();
 
-        // 4. Xây dựng Object Dữ liệu Tổng
+        // 5. Xây dựng Object Dữ liệu Tổng
         $formattedEmployee = [
             'full_name'     => $employee->full_name ?? 'Chưa cập nhật tên',
             'employee_code' => $employee->employee_code ?? 'Chưa có mã',
             'status'        => $account->is_active ? 'active' : 'inactive',
             'role'          => $roleNameVN,
             'branch_name'   => $employee->branch ? $employee->branch->name : 'Chưa cập nhật cơ sở', 
-            'type'          => $employee->type ?? 'part', 
+            'type'          => $employmentType, // Lưu đúng chữ 'full' hoặc 'part'
             'base_salary'   => $employee->base_salary ?? 35000, 
             'phonenumber'   => $employee->phonenumber ?? 'Chưa cập nhật SĐT', 
             'email'         => $employee->email ?? 'Chưa cập nhật Email',
             'avatar_url'    => $employee->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($employee->full_name) . '&background=random',
-            
-            // CHÈN MẢNG LỊCH SỬ CÔNG TÁC VÀO ĐÂY
             'job_history'   => $formattedJobHistory 
         ];
 
+        // 6. Trả về cho FE
         return $this->successResponse(
-            ['employee' => $formattedEmployee], 
+            [
+                'role'     => $employmentType, // 👉 FE SẼ LẤY BIẾN NÀY ĐỂ QUYẾT ĐỊNH KHÓA/MỞ NÚT ĐĂNG KÝ
+                'employee' => $formattedEmployee
+            ], 
             'Lấy thông tin hồ sơ thành công'
         );
     }

@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             ScheduleSeeder::class, // File này sinh lịch làm việc cho NV003
             ShiftDefinitionSeeder::class, // TẠO CA LÀM TRƯỚC
             WorkScheduleSeeder::class,    // TẠO PHÂN CA SAU
+            
         ]);
     }
 }

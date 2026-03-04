@@ -16,7 +16,7 @@ return new class extends Migration
             // Thời gian nghỉ giữa ca (Dành cho ca gãy)
             $table->time('break_start')->nullable(); 
             $table->time('break_end')->nullable();
-            
+            // $table->string('fe_time_format')->nullable()->comment('Định dạng hiển thị FE (vd: 6:00-10:00)');
             $table->time('end_time'); // Giờ kết thúc
             
             // Hệ số lương (Ví dụ làm Lễ Tết là 1.5, 2.0...)

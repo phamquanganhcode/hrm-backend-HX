@@ -90,6 +90,38 @@ class AttendanceController extends Controller
         ], 200);
     }
 
+    public function getMyRegistrations(Request $request)
+    {
+        $employeeId = $request->user()->employee_id; // Lấy mã nhân viên đang đăng nhập
+        $date = $request->query('date', now()->toDateString());
+
+        // Tìm ngày đầu tuần và cuối tuần
+        $startOfWeek = \Carbon\Carbon::parse($date)->startOfWeek()->toDateString();
+        $endOfWeek = \Carbon\Carbon::parse($date)->endOfWeek()->toDateString();
+
+        // Query bảng nguyện vọng
+        $registrations = \App\Models\ShiftRegistration::with('shift')
+            ->where('employee_id', $employeeId)
+            ->whereBetween('request_date', [$startOfWeek, $endOfWeek])
+            ->get();
+
+        // Format lại dữ liệu cho Frontend khớp với initialSelected
+        $result = [];
+        foreach ($registrations as $reg) {
+            $dateStr = $reg->request_date;
+            // Kiểm tra xem shift có tồn tại không để tránh lỗi
+            if ($reg->shift) {
+                $shiftName = $reg->shift->name; 
+                
+                if (!isset($result[$dateStr])) {
+                    $result[$dateStr] = [];
+                }
+                $result[$dateStr][] = $shiftName;
+            }
+        }
+
+        return response()->json($result);
+    }
     // 2. HÀM LƯU TRỰC TIẾP VÀO BẢNG WORK SCHEDULE
     // public function registerShifts(Request $request)
     // {
