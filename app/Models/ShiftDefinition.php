@@ -14,7 +14,7 @@ class ShiftDefinition extends Model
     protected $guarded = [];
     
     // Tự động đính kèm fe_time_format mỗi khi gọi API
-    protected $appends = ['fe_time_format'];
+    // protected $appends = ['fe_time_format'];
 
     protected $fillable = [
         'name', 

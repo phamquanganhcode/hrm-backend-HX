@@ -22,35 +22,35 @@ class ShiftDefinitionSeeder extends Seeder
                 'name' => 'Sáng',
                 'start_time' => '06:00:00',
                 'end_time' => '10:00:00',
-                'fe_time_format' => '6:00-10:00', // Cột này dùng để hiển thị trên UI
+                // 'fe_time_format' => '6:00-10:00', // Cột này dùng để hiển thị trên UI
                 'is_active' => true,
             ],
             [
                 'name' => 'Trưa',
                 'start_time' => '10:00:00',
                 'end_time' => '14:00:00',
-                'fe_time_format' => '10:00-14:00',
+                // 'fe_time_format' => '10:00-14:00',
                 'is_active' => true,
             ],
             [
                 'name' => 'Chiều',
                 'start_time' => '14:00:00',
                 'end_time' => '18:00:00',
-                'fe_time_format' => '14:00-18:00',
+                // 'fe_time_format' => '14:00-18:00',
                 'is_active' => true,
             ],
             [
                 'name' => 'Tối',
                 'start_time' => '18:00:00',
                 'end_time' => '22:00:00',
-                'fe_time_format' => '18:00-22:00',
+                // 'fe_time_format' => '18:00-22:00',
                 'is_active' => true,
             ],
             [
                 'name' => 'Gãy',
                 'start_time' => '10:15:00',
                 'end_time' => '21:00:00',
-                'fe_time_format' => '10:15-21:00',
+                // 'fe_time_format' => '10:15-21:00',
                 'is_active' => true,
             ]
         ];
