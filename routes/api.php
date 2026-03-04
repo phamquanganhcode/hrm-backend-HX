@@ -21,10 +21,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/work-schedules', [AttendanceController::class, 'getWeeklySchedule']);
             
             // API Lấy danh sách ngày & ca trống cho Modal Đăng ký
-            Route::get('/work-schedules/registration-config', [AttendanceController::class, 'getRegistrationConfig']);
-
+            Route::get('/shifts/definitions', [AttendanceController::class, 'getRegistrationConfig']);
             // API Lưu thẳng lịch làm việc do nhân viên tự chọn
-            Route::post('/work-schedules/register', [AttendanceController::class, 'registerShifts']);
+            Route::post('/shift-registrations', [AttendanceController::class, 'registerShifts']);
         });
 
 });
