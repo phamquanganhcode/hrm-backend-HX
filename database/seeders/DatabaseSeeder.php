@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
             ScheduleSeeder::class, // File này sinh lịch làm việc cho NV003
             ShiftDefinitionSeeder::class, // TẠO CA LÀM TRƯỚC
             WorkScheduleSeeder::class,    // TẠO PHÂN CA SAU
-            
+            EmployeeAndShiftSeeder::class, // File này tạo 10 NV test và đăng ký ca cho họ, trong đó có 5 NV đăng ký đầy đủ Ca Sáng để test hiệu ứng đỏ
         ]);
     }
 }

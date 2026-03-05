@@ -66,8 +66,12 @@ public function getRegistrationConfig(Request $request)
     $displayDays = [];
     for ($i = 0; $i < 7; $i++) {
         $currentDay = $startOfWeek->copy()->addDays($i);
+        
+        // Sửa logic hiển thị label ở đây
+        $dayLabel = ($i + 2 == 8) ? 'Chủ Nhật' : 'Thứ ' . ($i + 2);
+
         $displayDays[] = [
-            'label' => 'Thứ ' . ($i + 2 == 8 ? 'Nhật' : $i + 2),
+            'label' => $dayLabel,
             'date' => $currentDay->toDateString()
         ];
     }
