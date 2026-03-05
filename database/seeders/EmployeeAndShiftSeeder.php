@@ -22,6 +22,10 @@ class EmployeeAndShiftSeeder extends Seeder
         // ==========================================
         $employees = [];
         for ($i = 1; $i <= 10; $i++) {
+            // Đặt tên riêng cho vài ID quen thuộc
+            $fullName = 'Nhân viên Test ' . $i;
+            if ($i == 3) $fullName = 'Nguyễn Đầu Bếp';
+            if ($i == 4) $fullName = 'Trần Chạy Bàn';
             $employees[] = [
                 'id'            => $i, 
                 'employee_code' => 'NV00' . $i,
