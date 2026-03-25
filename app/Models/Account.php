@@ -2,25 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable; // Đổi extends
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Chuẩn ở đây!
+use Illuminate\Foundation\Auth\User as Authenticatable; // Dùng để đăng nhập Sanctum/JWT
+use Laravel\Sanctum\HasApiTokens; // 🟢 1. Khai báo thư viện tạo Token ở đây
 
-class Account extends Authenticatable
+class Account extends Authenticatable // Kế thừa từ Authenticatable thay vì Model thường
 {
+    use HasApiTokens, SoftDeletes; // 🟢 2. Kích hoạt HasApiTokens ở bên trong class
+    protected $guarded = [];
 
-    use HasFactory; // Model cầm "chìa khóa" này thì mới mở được Factory
-    use HasApiTokens, SoftDeletes;
-
-    protected $fillable = ['employee_id', 'username', 'password', 'role', 'is_active'];
-    
-    // Ẩn password khỏi API trả về
-    protected $hidden = ['password'];
-    
-    // Thêm đoạn này vào dưới cùng của class Account
-    public function employee()
-    {
-        return $this->belongsTo(Employee::class, 'employee_id', 'id');
-    }
+    // 🛡️ BẢO MẬT: Giấu tuyệt đối cột password khi in dữ liệu ra JSON
+    protected $hidden = [
+        'password',
+    ];
 }

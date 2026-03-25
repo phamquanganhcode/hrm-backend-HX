@@ -3,24 +3,76 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Chuẩn ở đây!
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Employee extends Model
 {
-    use HasFactory; // Model cầm "chìa khóa" này thì mới mở được Factory
-        protected $fillable = [
-        'employee_code', 'full_name', 'email', 'phonenumber', 
-        'avatar_url', 'fingerprint_id', 'role', 'branch_id', 
-        'type', 'base_salary', 'status'
-    ];
+    use HasFactory, SoftDeletes;
+    protected $guarded = [];
+
+    // --- Thông tin cơ bản ---
     public function branch()
     {
-        // 1 Nhân viên thuộc về 1 Cơ sở (Branch)
-        return $this->belongsTo(Branch::class, 'branch_id');
+        return $this->belongsTo(Branch::class, 'branch_id', 'id');
     }
-        // 1 Nhân viên có nhiều Lịch sử công tác
+
+    // 🟢 THÊM HÀM NÀY VÀO ĐỂ KHÔNG BỊ LỖI LỊCH SỬ CÔNG TÁC
     public function jobHistories()
     {
-        return $this->hasMany(JobHistory::class, 'employee_id');
+        return $this->hasMany(JobHistory::class, 'employee_id', 'id');
+    }
+
+    public function payGrade()
+    {
+        return $this->belongsTo(PayGrade::class, 'pay_grade_id');
+    }
+
+    public function account()
+    {
+        return $this->hasOne(Account::class, 'employee_id');
+    }
+
+    public function laborContracts()
+    {
+        return $this->hasMany(LaborContract::class, 'employee_id');
+    }
+
+    // --- Chấm công & Phân ca ---
+    public function workSchedules()
+    {
+        return $this->hasMany(WorkSchedule::class, 'employee_id');
+    }
+
+    public function dailyAttendances()
+    {
+        return $this->hasMany(DailyAttendance::class, 'employee_id');
+    }
+
+    // --- Lương & KPI ---
+    public function monthlyRevenueKpis()
+    {
+        return $this->hasMany(MonthlyRevenueKpi::class, 'employee_id');
+    }
+
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class, 'employee_id');
+    }
+
+    public function payrollChanges()
+    {
+        return $this->hasMany(PayrollChange::class, 'employee_id');
+    }
+    
+    // Hàm Helper: Lấy hợp đồng đang active
+    public function getActiveContractAttribute()
+    {
+        return $this->laborContracts()
+            ->where('start_date', '<=', now())
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', now());
+            })->first();
     }
 }

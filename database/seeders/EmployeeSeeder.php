@@ -1,52 +1,63 @@
 <?php
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Employee;
-use App\Models\Branch;
-use App\Models\LaborContract;
+use App\Models\Account;
 use App\Models\JobHistory;
 
 class EmployeeSeeder extends Seeder
 {
     public function run(): void
     {
-        $branchTL = Branch::where('name', 'Chi nhánh Thủy Lợi')->first();
-        $branchHM = Branch::where('name', 'Chi nhánh Hoàng Mai')->first();
+        $users = [
+            [
+                'code' => 'HX_ADMIN', 'name' => 'Lê Tổng Quản', 'role' => 'C3', 
+                'branch_id' => 1, 'pos_id' => 1, 'username' => 'admin'
+            ],
+            [
+                'code' => 'HX_MANAGER', 'name' => 'Nguyễn Quản Lý', 'role' => 'C2', 
+                'branch_id' => 1, 'pos_id' => 2, 'username' => 'manager'
+            ],
+            [
+                'code' => 'HX_STAFF', 'name' => 'Trần Chạy Bàn', 'role' => 'C0', 
+                'branch_id' => 1, 'pos_id' => 4, 'username' => 'staff'
+            ],
+        ];
 
-        // 1. Tạo 4 nhân viên CỐ ĐỊNH để cấp tài khoản
-        $admin = Employee::create([
-            'employee_code' => 'ADMIN01', 'full_name' => 'Nguyễn Quản Trị',
-            'email' => 'admin@haixom.com', 'phonenumber' => '0900000000',
-            'role' => 'admin', 'branch_id' => $branchTL->id,
-            'type' => 'full', 'base_salary' => 20000000, 'status' => 'active',
-        ]);
+        foreach ($users as $u) {
+            // 1. Tạo Nhân viên
+            $emp = Employee::create([
+                'employee_code' => $u['code'],
+                'full_name' => $u['name'],
+                'role' => $u['role'],
+                'branch_id' => $u['branch_id'],
+                'type' => 'full-time',
+                'pay_grade_id' => 1,
+                'status' => 'active',
+                'phonenumber' => '09'.rand(10000000, 99999999)
+            ]);
 
-        $manager = Employee::create([
-            'employee_code' => 'NV001', 'full_name' => 'Trần Quản Lý',
-            'email' => 'quanly@haixom.com', 'phonenumber' => '0911111111',
-            'role' => 'manager', 'branch_id' => $branchTL->id,
-            'type' => 'full', 'base_salary' => 15000000, 'status' => 'active',
-        ]);
+            // 2. Tạo Tài khoản đăng nhập (Mật khẩu chung: 123)
+            Account::create([
+                'employee_id' => $emp->id,
+                'username' => $u['username'],
+                'password' => Hash::make('123'),
+                'role' => $u['role'],
+                'is_active' => true
+            ]);
 
-        $chef = Employee::create([
-            'employee_code' => 'NV002', 'full_name' => 'Nguyễn Đầu Bếp',
-            'email' => 'bep@haixom.com', 'phonenumber' => '0922222222',
-            'role' => 'employee_chef', 'branch_id' => $branchHM->id,
-            'type' => 'full', 'base_salary' => 12000000, 'status' => 'active',
-        ]);
-
-        $staff = Employee::create([
-            'employee_code' => 'NV003', 'full_name' => 'Nguyễn Văn Bàn',
-            'email' => 'ban@haixom.com', 'phonenumber' => '0987654321',
-            'role' => 'employee_staff', 'branch_id' => $branchTL->id,
-            'type' => 'part', 'base_salary' => 35000, 'status' => 'active',
-        ]);
-
-        // // 2. Tạo 50 nhân viên ảo (Bỏ phần tạo Account ở đây)
-        // Employee::factory(50)->create()->each(function ($employee) {
-        //     LaborContract::factory()->create(['employee_id' => $employee->id]);
-        //     JobHistory::factory(rand(1, 2))->create(['employee_id' => $employee->id]);
-        // });
+            // 3. Tạo Lịch sử công tác ban đầu
+            JobHistory::create([
+                'employee_id' => $emp->id,
+                'branch_id' => $u['branch_id'],
+                'position_id' => $u['pos_id'],
+                'pay_grade_id' => 1,
+                'start_date' => now()->subMonths(6)->toDateString(),
+                'base_salary_amount' => 5500000
+            ]);
+        }
     }
 }
