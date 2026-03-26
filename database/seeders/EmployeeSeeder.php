@@ -15,15 +15,20 @@ class EmployeeSeeder extends Seeder
         $users = [
             [
                 'code' => 'HX_ADMIN', 'name' => 'Lê Tổng Quản', 'role' => 'C3', 
-                'branch_id' => 1, 'pos_id' => 1, 'username' => 'admin'
+                'branch_id' => 1, 'pos_id' => 1, 'username' => 'admin' // Số 3 trên FE
             ],
             [
                 'code' => 'HX_MANAGER', 'name' => 'Nguyễn Quản Lý', 'role' => 'C2', 
-                'branch_id' => 1, 'pos_id' => 2, 'username' => 'manager'
+                'branch_id' => 1, 'pos_id' => 2, 'username' => 'manager' // Số 2 trên FE
             ],
             [
-                'code' => 'HX_STAFF', 'name' => 'Trần Chạy Bàn', 'role' => 'C0', 
-                'branch_id' => 1, 'pos_id' => 4, 'username' => 'staff'
+                // 🟢 THÊM ÔNG KẾ TOÁN VÀO ĐÂY CHO KHỚP VỚI FE
+                'code' => 'HX_ACCOUNTING', 'name' => 'Trần Kế Toán', 'role' => 'C1', 
+                'branch_id' => 1, 'pos_id' => 3, 'username' => 'accounting' // Số 1 trên FE
+            ],
+            [
+                'code' => 'HX_STAFF', 'name' => 'Phạm Chạy Bàn', 'role' => 'C0', 
+                'branch_id' => 1, 'pos_id' => 4, 'username' => 'nhanvienban' // Số 0 trên FE
             ],
         ];
 

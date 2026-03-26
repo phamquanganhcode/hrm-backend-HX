@@ -2,51 +2,39 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use Illuminate\Support\Facades\Artisan;
-use App\Http\Controllers\Api\AttendanceController;
+// use App\Http\Controllers\Api\AttendanceController; // Tạm tắt nếu bạn chưa code file này
 
 Route::prefix('v1')->group(function () {
     
-    // Nhóm Auth (Public)
+    // ==========================================
+    // 1. Module Auth & Profile
+    // ==========================================
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
 
-    // Nhóm Private (Bắt buộc phải có Token)
-        Route::middleware('auth:sanctum')->group(function () {
-            // API Profile
-            Route::get('/auth/me', [AuthController::class, 'me']);
-            
-            // API Lịch làm việc (Mở khóa dòng này, bỏ dấu // đi)
-            Route::get('/work-schedules', [AttendanceController::class, 'getWeeklySchedule']);
-            
-            // API Lấy danh sách ngày & ca trống cho Modal Đăng ký
-            Route::get('/shifts/definitions', [AttendanceController::class, 'getRegistrationConfig']);
-            // API Lưu thẳng lịch làm việc do nhân viên tự chọn
-            Route::post('/shift-registrations', [AttendanceController::class, 'registerShifts']);
-            // Lấy danh sách ca đã đăng ký của user đang đăng nhập
-            Route::get('/shift-registrations/me', [AttendanceController::class, 'getMyRegistrations']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
+        
+        // ==========================================
+        // MOCK API: Đỡ đạn cho Frontend khỏi bị Crash 
+        // (Trả về mảng rỗng để FE render được giao diện Dashboard)
+        // ==========================================
+        Route::get('/work-schedules', function() {
+            return response()->json(['status' => 'success', 'data' => []], 200);
+        });
+        Route::get('/salary-history', function() {
+            return response()->json(['status' => 'success', 'data' => []], 200);
         });
 
-});
-
-// Tuyệt chiêu chạy lệnh hệ thống qua URL (Sau này làm xong thì xóa đi cho bảo mật)
-Route::get('/setup-database', function () {
-    try {
-        // Chạy lệnh migrate và seed bắt buộc
-        Artisan::call('migrate:fresh', [
-            '--seed' => true,
-            '--force' => true
-        ]);
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Chúc mừng! Đã tạo bảng và bơm dữ liệu thành công.'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage()
-        ], 500);
-    }
+        /*
+         * Tạm comment các route cũ lại cho đến khi chúng ta viết Controller thật
+         *
+         * Route::get('/shifts/definitions', [AttendanceController::class, 'getRegistrationConfig']);
+         * Route::post('/shift-registrations', [AttendanceController::class, 'registerShifts']);
+         * Route::get('/shift-registrations/me', [AttendanceController::class, 'getMyRegistrations']);
+         */
+    });
 });
