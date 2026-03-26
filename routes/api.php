@@ -17,7 +17,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
-        
+        // 🟢 API CHẤM CÔNG (MỚI THÊM)
+        Route::get('/daily-attendances/summary', [AttendanceController::class, 'getMonthlySummary']);
         // ==========================================
         // MOCK API: Đỡ đạn cho Frontend khỏi bị Crash 
         // (Trả về mảng rỗng để FE render được giao diện Dashboard)

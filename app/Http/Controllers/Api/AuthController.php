@@ -20,54 +20,50 @@ class AuthController extends Controller
 
 public function login(Request $request)
     {
-        // Validate đầu vào
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
         try {
-            // 1. TÌM TÀI KHOẢN TRONG DATABASE (Bỏ qua Auth::attempt)
             $account = \App\Models\Account::where('username', $request->username)->first();
 
-            // Bắt lỗi: Không có tài khoản
             if (!$account) {
-                return $this->errorResponse('Tài khoản không tồn tại!', 401);
+                return response()->json(['message' => 'Tài khoản không tồn tại!'], 401);
             }
 
-            // 2. SO SÁNH MẬT KHẨU (Dùng Hash::check)
             if (!\Illuminate\Support\Facades\Hash::check($request->password, $account->password)) {
-                return $this->errorResponse('Sai mật khẩu!', 401);
+                return response()->json(['message' => 'Sai mật khẩu!'], 401);
             }
 
-            // 3. TẠO TOKEN ĐĂNG NHẬP
             $token = $account->createToken('auth_token')->plainTextToken;
 
-            // 4. PHIÊN DỊCH ROLE (Chuyển chữ sang số cho Frontend)
-            $roleNumber = 3; // Mặc định là nhân viên (3)
-            $roleStr = strtolower($account->role);
-            if ($roleStr === 'admin') {
-                $roleNumber = 1;
-            } elseif ($roleStr === 'manager') {
-                $roleNumber = 2;
+            // 🟢 LÕI CỦA VẤN ĐỀ Ở ĐÂY: DỊCH C3, C2, C1 SANG 3, 2, 1 CHO FE
+            $roleNumber = 0; // Mặc định cho nhân viên thường
+            if ($account->role === 'C3') {
+                $roleNumber = 3; // Admin / Kế toán tổng
+            } elseif ($account->role === 'C2') {
+                $roleNumber = 2; // Quản lý cơ sở (Manager)
+            } elseif ($account->role === 'C1') {
+                $roleNumber = 1; // Kế toán chi nhánh (Accounting)
             }
             
-            // 5. TRẢ DỮ LIỆU VỀ
+            // TRẢ VỀ THEO ĐÚNG FORMAT MÀ FRONTEND ĐANG CHỜ
             return response()->json([
                 'token' => $token,
                 'user'  => [
-                    'id'       => $account->id,
+                    'id'       => $account->employee_id, 
                     'username' => $account->username,
-                    'role'     => $roleNumber,
+                    'role'     => $roleNumber, // Đã được map chuẩn 1, 2, 3
                 ]
             ], 200);
             
         } catch (\Exception $e) {
-            return $this->errorResponse('Lỗi máy chủ nội bộ: ' . $e->getMessage(), 500);
+            return response()->json(['message' => 'Lỗi: ' . $e->getMessage()], 500);
         }
     }
 
-public function me(Request $request)
+    public function me(Request $request)
     {
         try {
             // 1. Lấy Account đang đăng nhập
