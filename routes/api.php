@@ -13,12 +13,22 @@ Route::prefix('v1')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
     });
 
+    // 🟢 ROUTE CHO MÁY CHẤM CÔNG (Không cần Token, chỉ cần Secret Key)
+    Route::post('/attendance/sync', [\App\Http\Controllers\Api\AttendanceController::class, 'sync']);
+    
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
+
         // 🟢 API CHẤM CÔNG (MỚI THÊM)
-        Route::get('/daily-attendances/summary', [AttendanceController::class, 'getMonthlySummary']);
+        Route::get('/daily-attendances', [\App\Http\Controllers\Api\AttendanceController::class, 'getDailyAttendances']);
+
+        // API Manager: Chấm công Realtime
+        Route::get('/time-logs/realtime', [\App\Http\Controllers\Api\AttendanceController::class, 'getRealtimeLogs']);
+        
+        // API Xử lý ngoại lệ
+        Route::post('/time-logs/exception', [\App\Http\Controllers\Api\AttendanceController::class, 'updateException']);
         // ==========================================
         // MOCK API: Đỡ đạn cho Frontend khỏi bị Crash 
         // (Trả về mảng rỗng để FE render được giao diện Dashboard)

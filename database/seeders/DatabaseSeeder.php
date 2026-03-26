@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             MasterDataSeeder::class, // Danh mục phải có trước
             EmployeeSeeder::class,   // Có danh mục rồi mới tạo Nhân viên được
             OperationSeeder::class,  // Có nhân viên, có ca làm việc rồi mới xếp ca được
+            AttendanceSeeder::class, // Thêm dòng này vào cuối
         ]);
     }
 }
