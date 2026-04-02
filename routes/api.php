@@ -2,9 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+
+// --- IMPORT CÁC CONTROLLER THẬT ---
 use App\Http\Controllers\Api\AuthController;
-use Illuminate\Support\Facades\File;
-// use App\Http\Controllers\Api\AttendanceController; // Tạm tắt nếu bạn chưa code file này
+use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Api\ShiftController;
+use App\Http\Controllers\Api\ScheduleController;
+use App\Http\Controllers\Api\AttendanceController; 
 
 Route::prefix('v1')->group(function () {
     
@@ -16,71 +21,35 @@ Route::prefix('v1')->group(function () {
     });
 
     // 🟢 ROUTE CHO MÁY CHẤM CÔNG (Không cần Token, chỉ cần Secret Key)
-    Route::post('/attendance/sync', [\App\Http\Controllers\Api\AttendanceController::class, 'sync']);
+    Route::post('/attendance/sync', [AttendanceController::class, 'sync']);
     
     // ==========================================
-    // 2. MOCK API CHO MANAGER (DÀNH CHO FRONTEND)
-    // Tạm để ngoài auth:sanctum để test giao diện không bị lỗi 401 (Unauthorized)
+    // 2. API CHO MANAGER (ĐÃ NỐI 100% CSDL THẬT)
+    // Lưu ý: Tạm để ngoài middleware auth:sanctum để test giao diện không bị 401
     // ==========================================
     
-    // -- Nhân sự (Employees) --
-    Route::get('/employees', function() {
-        // Đọc file db_employees.json từ thư mục public của Frontend hoặc Backend
-        $path = public_path('db_employees.json'); 
-        
-        if (!File::exists($path)) {
-            return response()->json(['error' => 'File not found'], 404);
-        }
+    // -- NHÂN SỰ --
+    Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::put('/employees/{id}', [EmployeeController::class, 'update']);
+    Route::put('/employees/{id}/department', [EmployeeController::class, 'updateDepartment']);
 
-        $json = File::get($path);
-        $data = json_decode($json, true);
+    // -- TỔ LÀM VIỆC --
+    Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::post('/departments', [DepartmentController::class, 'store']);
+    Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
 
-        return response()->json($data, 200);
-    });
-    Route::put('/employees/{id}', function($id) {
-        return response()->json(['success' => true], 200);
-    });
-    Route::put('/employees/{id}/department', function($id) {
-        return response()->json(['success' => true], 200);
-    });
+    // -- CA LÀM VIỆC --
+    Route::get('/shifts', [ShiftController::class, 'index']);
+    Route::post('/shifts', [ShiftController::class, 'store']);
 
-    // -- Phòng ban / Tổ (Departments) --
-    Route::get('/departments', function() {
-        return response()->json([], 200);
-    });
-    Route::post('/departments', function() {
-        return response()->json(['success' => true], 200);
-    });
-    Route::delete('/departments/{id}', function($id) {
-        return response()->json(['success' => true], 200);
-    });
+    // -- XẾP LỊCH --
+    Route::get('/schedules/scheduled-dates', [ScheduleController::class, 'getScheduledDates']);
+    Route::get('/schedule/{date}', [ScheduleController::class, 'getByDate']);
+    Route::post('/schedule/{date}', [ScheduleController::class, 'updateByDate']);
 
-    // -- Ca làm việc (Shifts) --
-    Route::get('/shifts', function() {
-        return response()->json(['shiftCategories' => []], 200);
-    });
-    Route::post('/shifts', function() {
-        return response()->json(['success' => true], 200);
-    });
-
-    // -- Xếp lịch (Schedule) --
-    Route::get('/schedules/scheduled-dates', function() {
-        return response()->json(['scheduledDates' => []], 200);
-    });
-    Route::get('/schedule/{date}', function($date) {
-        return response()->json(['assignments' => []], 200);
-    });
-    Route::post('/schedule/{date}', function($date) {
-        return response()->json(['success' => true], 200);
-    });
-
-    // -- Chấm công (Attendance Manager) --
-    Route::get('/attendance/{date}', function($date) {
-        return response()->json([], 200);
-    });
-    Route::post('/attendance/override', function() {
-        return response()->json(['success' => true], 200);
-    });
+    // -- CHẤM CÔNG & GHI ĐÈ --
+    Route::get('/attendance/{date}', [AttendanceController::class, 'getByDate']);
+    Route::post('/attendance/override', [AttendanceController::class, 'override']);
 
 
     // ==========================================
@@ -91,17 +60,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
 
-        // 🟢 API CHẤM CÔNG (MỚI THÊM)
-        Route::get('/daily-attendances', [\App\Http\Controllers\Api\AttendanceController::class, 'getDailyAttendances']);
-
-        // API Manager: Chấm công Realtime
-        Route::get('/time-logs/realtime', [\App\Http\Controllers\Api\AttendanceController::class, 'getRealtimeLogs']);
-        
-        // API Xử lý ngoại lệ
-        Route::post('/time-logs/exception', [\App\Http\Controllers\Api\AttendanceController::class, 'updateException']);
+        // 🟢 API CHẤM CÔNG (Dành cho Dashboard cá nhân hoặc Realtime)
+        Route::get('/daily-attendances', [AttendanceController::class, 'getDailyAttendances']);
+        Route::get('/time-logs/realtime', [AttendanceController::class, 'getRealtimeLogs']);
+        Route::post('/time-logs/exception', [AttendanceController::class, 'updateException']);
         
         // ==========================================
-        // MOCK API: Đỡ đạn cho Frontend khỏi bị Crash (Bản cũ)
+        // MOCK API: Đỡ đạn cho Frontend Employee khỏi bị Crash
         // ==========================================
         Route::get('/work-schedules', function() {
             return response()->json(['status' => 'success', 'data' => []], 200);
@@ -109,13 +74,5 @@ Route::prefix('v1')->group(function () {
         Route::get('/salary-history', function() {
             return response()->json(['status' => 'success', 'data' => []], 200);
         });
-
-        /*
-         * Tạm comment các route cũ lại cho đến khi chúng ta viết Controller thật
-         *
-         * Route::get('/shifts/definitions', [AttendanceController::class, 'getRegistrationConfig']);
-         * Route::post('/shift-registrations', [AttendanceController::class, 'registerShifts']);
-         * Route::get('/shift-registrations/me', [AttendanceController::class, 'getMyRegistrations']);
-         */
     });
 });

@@ -5,68 +5,85 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class DepartmentController extends Controller
 {
     /**
+     * Lấy danh sách Tổ / Chi nhánh
      * Tương đương: @app.get("/api/departments")
      */
     public function index()
     {
-        $depts = DB::table('departments')->select('id', 'name')->get();
+        // Đọc dữ liệu trực tiếp từ bảng 'branches' của hệ thống thật
+        $branches = DB::table('branches')
+            ->whereNull('deleted_at') // Nếu bảng của bạn có dùng softDeletes
+            ->get();
 
-        // Logic giống main.py: Nếu DB chưa có, tự động tạo danh sách mặc định
-        if ($depts->isEmpty()) {
-            $defaultDepts = ["Quản lý", "Bếp", "Bàn", "Nướng", "Bia", "Tạp vụ", "Bảo vệ"];
-            $insertData = [];
-            foreach ($defaultDepts as $d) {
-                // Tạo ID bằng cách viết hoa và thay dấu cách bằng gạch dưới
-                $id = "DEPT_" . strtoupper(str_replace(' ', '_', $d));
-                $insertData[] = [
-                    'id' => $id,
-                    'name' => $d,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now()
-                ];
-            }
-            DB::table('departments')->insert($insertData);
-            $depts = DB::table('departments')->select('id', 'name')->get();
-        }
+        $formatted = $branches->map(function ($b) {
+            return [
+                "id" => (string) $b->id, // Ép kiểu về chuỗi để React không bị lỗi
+                "name" => $b->name ?? 'Chưa có tên'
+            ];
+        });
 
-        return response()->json($depts, 200);
+        return response()->json($formatted, 200);
     }
 
     /**
+     * Thêm Tổ / Chi nhánh mới
      * Tương đương: @app.post("/api/departments")
      */
     public function store(Request $request)
     {
-        // Validation cơ bản (Tương đương Pydantic Schema)
-        $request->validate([
-            'id' => 'required|string',
-            'name' => 'required|string'
-        ]);
+        $name = $request->input('name');
 
-        DB::table('departments')->insert([
-            'id' => $request->id,
-            'name' => $request->name,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now()
-        ]);
+        if (empty($name)) {
+            return response()->json(["success" => false, "message" => "Tên tổ không được để trống"], 400);
+        }
 
-        return response()->json([
-            'success' => true, 
-            'message' => 'Thêm tổ thành công'
-        ], 200);
+        // Kiểm tra xem tên chi nhánh đã tồn tại chưa
+        $exists = DB::table('branches')->where('name', $name)->whereNull('deleted_at')->exists();
+        if ($exists) {
+            return response()->json(["success" => false, "message" => "Tên tổ/chi nhánh này đã tồn tại"], 400);
+        }
+
+        // Lưu ý: Frontend React có thể gửi kèm 'id' (dạng DEPT_123), 
+        // nhưng ta bỏ qua và để Database tự động tăng id (auto-increment)
+        DB::table('branches')->insert([
+            'name' => $name,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        return response()->json(["success" => true, "message" => "Thêm tổ thành công"], 200);
     }
 
     /**
+     * Xóa Tổ / Chi nhánh
      * Tương đương: @app.delete("/api/departments/{dept_id}")
      */
     public function destroy($id)
     {
-        DB::table('departments')->where('id', $id)->delete();
-        return response()->json(['success' => true], 200);
+        // Bọc trong Try-Catch để đề phòng lỗi Khóa ngoại (Ví dụ: Chi nhánh đang có nhân viên)
+        try {
+            // Kiểm tra xem chi nhánh có tồn tại không
+            $branch = DB::table('branches')->where('id', $id)->first();
+            if (!$branch) {
+                return response()->json(["success" => false, "message" => "Không tìm thấy tổ/chi nhánh"], 404);
+            }
+
+            // Thực hiện xóa (Hoặc xóa mềm nếu bảng có softDeletes)
+            // Tạm thời dùng xóa cứng để demo
+            DB::table('branches')->where('id', $id)->delete();
+            
+            return response()->json(["success" => true, "message" => "Xóa tổ thành công"], 200);
+
+        } catch (\Exception $e) {
+            // Nếu MySQL báo lỗi khóa ngoại Constraint Fails
+            return response()->json([
+                "success" => false, 
+                "message" => "Không thể xóa: Tổ này đang có nhân viên làm việc!"
+            ], 500);
+        }
     }
 }

@@ -2,368 +2,200 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\AttendanceRealtimeEvent;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\DailyAttendance;
-use App\Models\AttendanceSession; // 🟢 Gọi bảng Session của bạn vào
-use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
-    // ==========================================
-    // 1. API ĐÓN DỮ LIỆU TỪ MÁY CHẤM CÔNG (HYBRID: VÙNG THỜI GIAN + MIN-MAX)
-    // ==========================================
-    public function sync(Request $request)
+    /**
+     * Lấy dữ liệu chấm công của 1 ngày
+     * Tương đương: @app.get("/api/attendance/{date}")
+     */
+    public function getByDate($date)
     {
-        if ($request->secret_key !== 'HoiBaoMat_ChiCuaHangMoiBiet') {
-            return response()->json(['status' => 'error', 'message' => 'Sai khóa bảo mật!'], 401);
-        }
+        // 1. Lấy tất cả nhân viên ĐƯỢC XẾP LỊCH ngày hôm đó
+        $schedules = DB::table('work_schedules')->where('date', $date)->whereNull('deleted_at')->get();
+        
+        // 2. Lấy dữ liệu CHẤM CÔNG THỰC TẾ đã xử lý
+        $attendances = DB::table('daily_attendances')->where('date', $date)->whereNull('deleted_at')->get();
+        $attDict = $attendances->keyBy('employee_id');
 
-        $logs = $request->logs;
-        $insertedCount = 0;
+        // Gộp danh sách những người có lịch HOẶC có đi làm (phòng trường hợp đi làm không xếp lịch)
+        $empIds = collect($schedules->pluck('employee_id'))->merge($attendances->pluck('employee_id'))->unique();
 
-        foreach ($logs as $log) {
-            $emp = Employee::where('employee_code', $log['employee_code'])->first();
-            
-            if ($emp) {
-                $scanTime = \Carbon\Carbon::parse($log['check_time']);
+        // Lấy thông tin chi tiết của các nhân viên này
+        $employees = DB::table('employees')
+            ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
+            ->whereIn('employees.id', $empIds)
+            ->select('employees.*', 'branches.name as branch_name')
+            ->get()
+            ->keyBy('id');
+
+        // 3. Lấy LOG QUẸT THẺ (Từ máy chấm công)
+        // Vì hệ thống lưu log thô, ta sẽ tìm giờ quét sớm nhất (CheckIn) và muộn nhất (CheckOut)
+        $fingerprintIds = $employees->pluck('fingerprint_id')->filter()->toArray();
+        $timeLogsRaw = DB::table('time_logs')
+            ->whereDate('timestamp', $date)
+            ->whereIn('fingerprint_id', $fingerprintIds)
+            ->whereNull('deleted_at')
+            ->get()
+            ->groupBy('fingerprint_id');
+
+        $records = [];
+        $expectedHeadcount = count($schedules);
+        $actualHeadcount = 0;
+        $overrideCount = 0;
+
+        foreach ($empIds as $empId) {
+            $emp = $employees->get($empId);
+            if (!$emp) continue;
+
+            $att = $attDict->get($empId);
+            $sched = $schedules->firstWhere('employee_id', $empId);
+
+            // --- XỬ LÝ LOG QUẸT THẺ ---
+            $logs = [];
+            $rawCheckIn = null;
+            $rawCheckOut = null;
+            if ($emp->fingerprint_id && $timeLogsRaw->has($emp->fingerprint_id)) {
+                $empLogs = $timeLogsRaw->get($emp->fingerprint_id);
+                // Giờ quẹt đầu tiên và cuối cùng trong ngày
+                $minTime = $empLogs->min('timestamp');
+                $maxTime = $empLogs->max('timestamp');
                 
-                // Quy đổi giờ ra số thập phân (Ví dụ 10:30 -> 10.5) để dễ so sánh vùng
-                $timeFloat = $scanTime->hour + ($scanTime->minute / 60.0);
+                $rawCheckIn = Carbon::parse($minTime)->format('H:i');
+                $rawCheckOut = ($minTime !== $maxTime) ? Carbon::parse($maxTime)->format('H:i') : null;
 
-                // 🟢 BƯỚC 1: ĐƯA VÀO PHỄU LỌC 4 VÙNG THỜI GIAN
-                $shiftType = null;
-                $actionType = null;
-                $logicalDate = $scanTime->format('Y-m-d');
-
-                if ($timeFloat >= 7.0 && $timeFloat <= 10.5) {
-                    // Vùng 1: 07:00 - 10:30
-                    $shiftType = 'CA_TRUA';
-                    $actionType = 'IN';
-                } elseif ($timeFloat >= 13.5 && $timeFloat <= 15.0) {
-                    // Vùng 2: 13:30 - 15:00
-                    $shiftType = 'CA_TRUA';
-                    $actionType = 'OUT';
-                } elseif ($timeFloat >= 15.5 && $timeFloat <= 17.5) {
-                    // Vùng 3: 15:30 - 17:30
-                    $shiftType = 'CA_TOI';
-                    $actionType = 'IN';
-                } elseif ($timeFloat >= 20.5 || $timeFloat <= 3.0) {
-                    // Vùng 4: 20:30 - 03:00 sáng hôm sau
-                    $shiftType = 'CA_TOI';
-                    $actionType = 'OUT';
-                    // Nếu khách nhậu đến 1h-3h sáng, lùi ngày về hôm qua để tính công
-                    if ($timeFloat <= 3.0) {
-                        $logicalDate = $scanTime->copy()->subDay()->format('Y-m-d');
-                    }
-                } else {
-                    // QUẸT NGOÀI 4 VÙNG NÀY -> RÁC -> BỎ QUA LUÔN
-                    continue; 
-                }
-
-                // 🟢 BƯỚC 2: TÌM HOẶC TẠO BẢN GHI TỔNG TRONG NGÀY
-                $record = DailyAttendance::firstOrCreate(
-                    ['employee_id' => $emp->id, 'date' => $logicalDate],
-                    [
-                        'actual_branch_id' => $request->branch_id ?? 1, 
-                        'status' => 'CÓ MẶT', 
-                        'is_holiday' => false, 
-                        'is_manually_adjusted' => false
-                    ]
-                );
-
-                // 🟢 BƯỚC 3: TÌM PHIÊN LÀM VIỆC (SESSION) CỦA CA TƯƠNG ỨNG
-                $session = AttendanceSession::where('daily_attendance_id', $record->id)
-                    ->where(function ($q) use ($shiftType, $logicalDate) {
-                        if ($shiftType === 'CA_TRUA') {
-                            // Ranh giới tìm Session Ca Trưa
-                            $q->whereBetween('check_in_time', [$logicalDate . ' 07:00:00', $logicalDate . ' 15:00:00'])
-                              ->orWhereBetween('check_out_time', [$logicalDate . ' 07:00:00', $logicalDate . ' 15:00:00']);
-                        } else {
-                            // Ranh giới tìm Session Ca Tối (Kéo dài đến 3h sáng hôm sau)
-                            $start = $logicalDate . ' 15:30:00';
-                            $end = \Carbon\Carbon::parse($logicalDate)->addDay()->format('Y-m-d') . ' 03:00:00';
-                            $q->whereBetween('check_in_time', [$start, $end])
-                              ->orWhereBetween('check_out_time', [$start, $end]);
-                        }
-                    })
-                    ->first();
-
-                // 🟢 BƯỚC 4: LƯU DỮ LIỆU BẰNG THUẬT TOÁN MIN - MAX (CHỐNG GHI ĐÈ)
-                // CHỈ cập nhật giờ nếu Quản lý CHƯA chốt tay sửa đổi
-                if (!$record->is_manually_adjusted) {
-                    if (!$session) {
-                        // Lần đầu tiên có dữ liệu của Ca này
-                        $newSession = new AttendanceSession([
-                            'employee_id'         => $emp->id,
-                            'daily_attendance_id' => $record->id,
-                            'date'                => $logicalDate,
-                            'check_in_time'       => null,
-                            'check_out_time'      => null,
-                        ]);
-
-                        if ($actionType === 'IN') {
-                            $newSession->check_in_time = $scanTime;
-                        } else {
-                            $newSession->check_out_time = $scanTime;
-                        }
-                        $newSession->save();
-                    } else {
-                        // Đã có phiên, bắt đầu so sánh để lấy MIN (cho IN) hoặc MAX (cho OUT)
-                        if ($actionType === 'IN') {
-                            if (!$session->check_in_time || $scanTime->lt(\Carbon\Carbon::parse($session->check_in_time))) {
-                                $session->check_in_time = $scanTime;
-                            }
-                        } else {
-                            if (!$session->check_out_time || $scanTime->gt(\Carbon\Carbon::parse($session->check_out_time))) {
-                                $session->check_out_time = $scanTime;
-                            }
-                        }
-                        $session->save();
-                    }
-                    
-                    // Chạm vào record tổng để báo React cập nhật lên Top
-                    $record->touch();
-                } else {
-                    // Nếu quản lý đã sửa (is_manually_adjusted = true) -> Bỏ qua, không cập nhật giờ nữa.
-                    // (Bạn có thể ghi 1 log ẩn ở đây nếu cần theo dõi)
-                }
-
-                // Chạm vào record tổng để báo React cập nhật lên Top
-                $record->touch();
-                $insertedCount++;
-
-                broadcast(new AttendanceRealtimeEvent([
-                    'message' => 'Có người vừa quẹt thẻ!',
-                    'employee_code' => $emp->employee_code
-                ]));
+                $logs[] = [
+                    'rawCheckIn' => $rawCheckIn,
+                    'rawCheckOut' => $rawCheckOut,
+                    'isLateIn' => $att ? ($att->late_minutes > 0) : false,
+                    'isEarlyOut' => $att ? ($att->early_minutes > 0) : false,
+                ];
             }
-        }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => "Đã đồng bộ $insertedCount lần quẹt thẻ (Hybrid Time-Windows)."
-        ], 200);
-    }
-
-    // ==========================================
-    // 2. API DÀNH CHO QUẢN LÝ (MANAGER): CHẤM CÔNG REALTIME
-    // ==========================================
-    public function getRealtimeLogs(Request $request)
-    {
-        try {
-            $account = $request->user();
-            $manager = Employee::find($account->employee_id);
-            $branchId = $manager ? $manager->branch_id : 1;
-            $date = $request->query('date', now()->toDateString());
-
-            $attendances = DailyAttendance::with(['employee'])
-                ->where('actual_branch_id', $branchId)
-                ->whereDate('date', $date)
-                ->orderBy('updated_at', 'desc') 
-                ->get();
-
-            $realtimeData = $attendances->map(function($record) {
-                $emp = $record->employee;
-                
-                // Lấy thông tin phiên làm việc
-                $session = AttendanceSession::where('daily_attendance_id', $record->id)->first();
-                
-                $deptName = 'Phục vụ';
-                if ($emp) {
-                    $deptName = match($emp->role) {
-                        'C3' => 'Giám đốc',
-                        'C2' => 'Quản lý',
-                        'C1' => 'Thu ngân / Kế toán',
-                        'C0' => 'Bàn / Bếp',
-                        default => 'Phục vụ'
-                    };
-                }
-
-                // 🟢 LẤY GIỜ TỪ BẢNG SESSION CỦA BẠN
-                $checkInTime = ($session && $session->check_in_time) ? Carbon::parse($session->check_in_time)->format('H:i:s') : '-';
-                $checkOutTime = ($session && $session->check_out_time) ? Carbon::parse($session->check_out_time)->format('H:i:s') : '-';
-                
-                // Thuật toán "Đoán Ca" và Tính đi muộn
-                $shift = 'Chưa xác định';
-                $isLate = false;
-                $lateMinutes = 0;
-
-                if ($session && $session->check_in_time) {
-                    $inCarbon = Carbon::parse($session->check_in_time);
-                    $hour = $inCarbon->hour;
-                    $minute = $inCarbon->minute;
-                    
-                    $startHour = 8; $startMinute = 0;
-
-                    if ($hour >= 5 && $hour < 11) {
-                        $shift = 'Sáng'; $startHour = 8;
-                    } elseif ($hour >= 11 && $hour < 14) {
-                        $shift = 'Trưa'; $startHour = 10;
-                    } elseif ($hour >= 14 && $hour < 18) {
-                        $shift = 'Chiều'; $startHour = 14;
-                    } elseif ($hour >= 18 && $hour <= 23) {
-                        $shift = 'Tối'; $startHour = 18;
-                    } else {
-                        $shift = 'Gãy'; $startHour = $hour;
-                    }
-
-                    $checkInTotalMins = ($hour * 60) + $minute;
-                    $startTotalMins = ($startHour * 60) + $startMinute;
-
-                    if ($checkInTotalMins > $startTotalMins) {
-                        $isLate = true;
-                        $lateMinutes = $checkInTotalMins - $startTotalMins;
-                    }
-                }
-
-                $calculatedStatus = $isLate ? 'ĐI MUỘN' : 'ĐÚNG GIỜ';
-                $calculatedNote = $isLate ? "Muộn {$lateMinutes} phút" : '-';
-
-                $finalStatus = $record->is_manually_adjusted ? $record->status : $calculatedStatus;
-                $finalNote = $record->is_manually_adjusted ? $record->note : $calculatedNote;
-
-                return [
-                    'record_id'   => $record->id, 
-                    'id'          => $emp ? $emp->employee_code : 'NV000',
-                    'name'        => $emp ? $emp->full_name : 'Không xác định',
-                    'department'  => $deptName,
-                    'shift'       => $shift,
-                    'check_in'    => $checkInTime, // 🟢 Dữ liệu từ bảng Session
-                    'check_out'   => $checkOutTime,// 🟢 Dữ liệu từ bảng Session
-                    'method'      => 'Vân tay',
-                    'status'      => $finalStatus, 
-                    'note'        => $finalNote    
-                ];
-            });
-
-            return response()->json([
-                'status' => 'success',
-                'data'   => $realtimeData
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    // ==========================================
-    // 3. API CẬP NHẬT XỬ LÝ NGOẠI LỆ TỪ QUẢN LÝ (CÓ LƯU LOG)
-    // ==========================================
-    public function updateException(Request $request)
-    {
-        try {
-            $record = DailyAttendance::find($request->record_id);
-            
-            if ($record) {
-                // 1. CHỤP LẠI DỮ LIỆU CŨ TRƯỚC KHI SỬA
-                $oldValue = [
-                    'status' => $record->status,
-                    'note' => $record->note,
-                    'is_manually_adjusted' => $record->is_manually_adjusted
-                ];
-
-                // 2. CẬP NHẬT DỮ LIỆU MỚI
-                $record->status = $request->status;
-                $record->note = $request->note;
-                $record->is_manually_adjusted = true; 
-                $record->save();
-
-                // 3. CHỤP LẠI DỮ LIỆU MỚI
-                $newValue = [
-                    'status' => $record->status,
-                    'note' => $record->note,
-                    'is_manually_adjusted' => true
-                ];
-
-                // 4. LƯU VÀO BẢNG NHẬT KÝ HỆ THỐNG (SYSTEM LOG)
-                // Lấy ID của người đang thao tác (Quản lý)
-                $actorId = $request->user()->id; 
-
-                \App\Models\SystemLog::create([
-                    'actor_id'     => $actorId,
-                    'action'       => 'MANUAL_UPDATE_ATTENDANCE', // Tên hành động
-                    'target_table' => 'daily_attendances',
-                    'target_id'    => $record->id,
-                    'old_value'    => json_encode($oldValue, JSON_UNESCAPED_UNICODE),
-                    'new_value'    => json_encode($newValue, JSON_UNESCAPED_UNICODE),
-                    'created_at'   => now()
-                ]);
-
-                return response()->json(['status' => 'success', 'message' => 'Cập nhật thành công!']);
+            // --- XÉT TRẠNG THÁI ---
+            $status = $att ? $att->status : 'absent';
+            if ($status !== 'absent' && $status !== 'Chờ duyệt') {
+                $actualHeadcount++;
             }
-            
-            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy bản ghi!'], 404);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            $isOverridden = $att ? (bool) $att->is_manually_adjusted : false;
+            if ($isOverridden) {
+                $overrideCount++;
+            }
+
+            $records[] = [
+                'id' => $emp->employee_code, // ID dành cho Frontend
+                'employeeId' => $emp->employee_code,
+                'shiftId' => (string) ($sched ? $sched->shift_id : 'Không rõ'),
+                'status' => $status,
+                'isOverridden' => $isOverridden,
+                'overrideDetails' => $isOverridden ? [
+                    'reason' => $att->note ?? 'Đã chỉnh sửa thủ công',
+                    'overriddenBy' => 'Quản lý' // Có thể mở rộng lấy user đăng nhập sau
+                ] : null,
+                'timeLogs' => empty($logs) ? [['rawCheckIn' => null, 'rawCheckOut' => null, 'isLateIn' => false, 'isEarlyOut' => false]] : $logs,
+                'personalInfo' => [
+                    'fullName' => $emp->full_name,
+                    'avatarUrl' => $emp->avatar_url ?? 'bg-blue-500'
+                ],
+                'employment' => [
+                    'department' => $emp->branch_name ?? 'Chưa phân chi nhánh',
+                    'role' => $emp->role ?? ''
+                ]
+            ];
         }
+
+        return response()->json($records, 200);
     }
 
-    // ==========================================
-    // 4. API DÀNH CHO KẾ TOÁN: BẢNG CÔNG TỔNG HỢP NGÀY
-    // ==========================================
-    public function getDailyAttendances(Request $request)
+    /**
+     * Ghi đè chấm công bằng tay (Manager)
+     * Tương đương: @app.post("/api/attendance/override")
+     */
+    public function override(Request $request)
     {
+        $date = $request->input('date');
+        $empCode = $request->input('employeeId'); // EMP_001
+        $newStatus = $request->input('newStatus');
+        $reason = $request->input('reason');
+        $reqTimeLogs = $request->input('timeLogs');
+
+        $emp = DB::table('employees')->where('employee_code', $empCode)->first();
+        if (!$emp) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy nhân viên'], 404);
+        }
+
+        $schedule = DB::table('work_schedules')->where('date', $date)->where('employee_id', $emp->id)->first();
+
+        DB::beginTransaction();
         try {
-            $branchId = $request->query('branch_id', 1);
-            $date = $request->query('date', now()->toDateString());
+            // 1. Cập nhật bảng Daily Attendances (Đã chốt)
+            $att = DB::table('daily_attendances')->where('date', $date)->where('employee_id', $emp->id)->first();
 
-            $attendances = DailyAttendance::with(['employee'])
-                ->where('actual_branch_id', $branchId)
-                ->whereDate('date', $date)
-                ->orderBy('updated_at', 'desc')
-                ->get();
+            $attData = [
+                'employee_id' => $emp->id,
+                'work_schedule_id' => $schedule ? $schedule->id : null,
+                'actual_branch_id' => $emp->branch_id,
+                'date' => $date,
+                'status' => $newStatus,
+                'is_manually_adjusted' => true,
+                'note' => $reason,
+                'updated_at' => now()
+            ];
 
-            $mappedData = $attendances->map(function($record) {
-                
-                // 🟢 TÍNH GIỜ LÀM TỪ BẢNG SESSION
-                // Sửa dòng này trong hàm getRealtimeLogs:
-                $session = AttendanceSession::where('daily_attendance_id', $record->id)
-                            ->orderBy('updated_at', 'desc') // Lấy ca vừa quẹt thẻ mới nhất để hiển thị lên bảng
-                            ->first();
-                $actualHours = 0;
-                $lateEarlyStr = '0';
-                $isLate = false;
+            if ($att) {
+                DB::table('daily_attendances')->where('id', $att->id)->update($attData);
+            } else {
+                $attData['created_at'] = now();
+                DB::table('daily_attendances')->insert($attData);
+            }
 
-                if ($session && $session->check_in_time && $session->check_out_time) {
-                    $in = Carbon::parse($session->check_in_time);
-                    $out = Carbon::parse($session->check_out_time);
-                    
-                    // Tính tổng số phút giữa In và Out
-                    $totalMinutes = $out->diffInMinutes($in);
-                    $actualHours = round($totalMinutes / 60, 2);
+            // 2. Chèn Log giả lập vào bảng Time Logs (Nếu quản lý có sửa cả giờ)
+            if (is_array($reqTimeLogs) && $emp->fingerprint_id) {
+                // Xóa log cũ của ngày hôm đó
+                DB::table('time_logs')
+                    ->where('fingerprint_id', $emp->fingerprint_id)
+                    ->whereDate('timestamp', $date)
+                    ->delete();
+
+                $machine = DB::table('timekeep_machines')->first();
+                $machineId = $machine ? $machine->id : 1; // Fallback máy chấm công ID = 1
+
+                $insertLogs = [];
+                foreach ($reqTimeLogs as $log) {
+                    if (!empty($log['rawCheckIn'])) {
+                        $insertLogs[] = [
+                            'machine_id' => $machineId,
+                            'fingerprint_id' => $emp->fingerprint_id,
+                            'timestamp' => $date . ' ' . $log['rawCheckIn'] . ':00',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                    }
+                    if (!empty($log['rawCheckOut'])) {
+                        $insertLogs[] = [
+                            'machine_id' => $machineId,
+                            'fingerprint_id' => $emp->fingerprint_id,
+                            'timestamp' => $date . ' ' . $log['rawCheckOut'] . ':00',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                    }
                 }
-
-                // Tính toán thông tin hiển thị (có thể nâng cấp thêm nếu muốn)
-                if ($record->late_minutes > 0) {
-                    $lateEarlyStr = $record->late_minutes . 'p';
-                    $isLate = true;
-                } elseif ($record->early_minutes > 0) {
-                    $lateEarlyStr = 'Sớm ' . $record->early_minutes . 'p';
+                if (!empty($insertLogs)) {
+                    DB::table('time_logs')->insert($insertLogs);
                 }
+            }
 
-                return [
-                    'id'                   => $record->id,
-                    'emp_code'             => $record->employee ? $record->employee->employee_code : 'NV000',
-                    'emp_name'             => $record->employee ? $record->employee->full_name : 'Không xác định',
-                    'status'               => $record->status ?? 'CHỜ DUYỆT',
-                    'standard_hours'       => 8.0, 
-                    'actual_hours'         => $actualHours, // 🟢 Giờ thực tế lấy từ Session
-                    'late_early'           => $lateEarlyStr,
-                    'is_late'              => $isLate,
-                    'ot_hours'             => (float) $record->overtime_hours,
-                ];
-            });
-
-            return response()->json([
-                'status' => 'success',
-                'data'   => $mappedData
-            ], 200);
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Ghi đè thành công'], 200);
 
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi ghi đè: ' . $e->getMessage()], 500);
         }
     }
 }

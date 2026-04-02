@@ -13,40 +13,36 @@ class EmployeeController extends Controller
      */
     public function index()
     {
-        $employees = DB::table('employees')->get();
+        // Lấy nhân viên và nối (Left Join) với bảng branches để lấy tên chi nhánh (phòng ban)
+        $employees = DB::table('employees')
+            ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
+            ->select('employees.*', 'branches.name as branch_name')
+            ->whereNull('employees.deleted_at') // Bỏ qua những người đã bị xóa (softDeletes)
+            ->get();
 
-        // Map lại dữ liệu để trả về cấu trúc JSON lồng nhau giống Pydantic Schema
         $formatted = $employees->map(function ($e) {
-            
-            // Xử lý mảng fixed_off_days (vì lưu trong DB dạng chuỗi JSON)
-            $fixedOffDays = [];
-            if ($e->fixed_off_days) {
-                $fixedOffDays = json_decode($e->fixed_off_days, true) ?? [];
-            }
-
+            // Trả về cấu trúc JSON y hệt Frontend đang kỳ vọng
             return [
-                'id' => $e->id,
-                'personalInfo' => [
-                    'fullName' => $e->full_name,
-                    'phone' => $e->phone,
-                    'dob' => $e->dob,
-                    'gender' => $e->gender,
-                    'avatarUrl' => $e->avatar_url ?? 'bg-indigo-500' // Giá trị mặc định nếu rỗng
+                "id" => $e->employee_code ?? (string)$e->id, // Lấy mã NV làm ID cho Frontend
+                "personalInfo" => [
+                    "fullName" => $e->full_name ?? "",
+                    "phone" => $e->phonenumber ?? "",
+                    "dob" => "", // Không có trong DB, trả về rỗng
+                    "gender" => "", // Không có trong DB, trả về rỗng
+                    "avatarUrl" => $e->avatar_url ?? ""
                 ],
-                'employment' => [
-                    // Trong CSDL Seeder đặt tên cột là department_id, ở main.py là department. 
-                    // Ta kiểm tra cả 2 để lấy đúng tên Tổ.
-                    'department' => $e->department_id ?? $e->department ?? 'Chưa phân tổ',
-                    'role' => $e->role,
-                    'level' => $e->level,
-                    'joinDate' => $e->join_date,
-                    'status' => $e->status ?? 'ACTIVE',
-                    'fixedOffDays' => $fixedOffDays
+                "employment" => [
+                    "department" => $e->branch_name ?? "Chưa phân chi nhánh",
+                    "role" => $e->role ?? "",
+                    "level" => $e->type ?? "", // Ánh xạ cột type sang level
+                    "joinDate" => $e->hire_date ?? "",
+                    "status" => $e->status ?? "Active",
+                    "fixedOffDays" => [] // Không có trong DB, trả về mảng rỗng để tránh lỗi JS
                 ],
-                'systemConfigs' => [
-                    'isLeader' => (bool) $e->is_leader,
-                    'faceIdRegistered' => (bool) $e->face_id_registered,
-                    'timekeeperId' => $e->timekeeper_id
+                "systemConfigs" => [
+                    "isLeader" => false, 
+                    "faceIdRegistered" => !empty($e->fingerprint_id),
+                    "timekeeperId" => $e->fingerprint_id ?? null
                 ]
             ];
         });
@@ -59,39 +55,37 @@ class EmployeeController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Kiểm tra xem có nhân viên này không
-        $employee = DB::table('employees')->where('id', $id)->first();
-        if (!$employee) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy nhân viên'], 404);
+        // Frontend gửi lên ID là employee_code (vd: EMP_01)
+        $emp = DB::table('employees')->where('employee_code', $id)->first();
+        
+        if (!$emp) {
+            return response()->json(["success" => false, "message" => "Không tìm thấy nhân viên"], 404);
         }
 
-        // Tạo mảng dữ liệu cập nhật linh hoạt (Chỉ cập nhật trường nào được gửi lên)
         $updateData = [];
 
+        // Ánh xạ các trường cập nhật
         if ($request->has('fullName')) $updateData['full_name'] = $request->fullName;
-        if ($request->has('phone')) $updateData['phone'] = $request->phone;
-        if ($request->has('dob')) $updateData['dob'] = $request->dob;
+        if ($request->has('phone')) $updateData['phonenumber'] = $request->phone;
         if ($request->has('role')) $updateData['role'] = $request->role;
-        if ($request->has('level')) $updateData['level'] = $request->level;
+        if ($request->has('level')) $updateData['type'] = $request->level;
+        if ($request->has('timekeeperId')) $updateData['fingerprint_id'] = $request->timekeeperId;
         
-        // Map payload 'department' vào cột CSDL
+        // Cập nhật department (branch_id)
+        // Vì Frontend gửi lên String (tên tổ), ta phải tìm ID của branch đó
         if ($request->has('department')) {
-            $updateData['department_id'] = $request->department;
-            $updateData['department'] = $request->department; // Lưu cả 2 phòng trường hợp CSDL của bạn có tên cột khác
-        }
-        
-        if ($request->has('timekeeperId')) $updateData['timekeeper_id'] = $request->timekeeperId;
-        
-        if ($request->has('fixedOffDays')) {
-            $updateData['fixed_off_days'] = json_encode($request->fixedOffDays);
+            $branch = DB::table('branches')->where('name', $request->department)->first();
+            if ($branch) {
+                $updateData['branch_id'] = $branch->id;
+            }
         }
 
-        // Tiến hành cập nhật
         if (!empty($updateData)) {
-            DB::table('employees')->where('id', $id)->update($updateData);
+            $updateData['updated_at'] = now();
+            DB::table('employees')->where('employee_code', $id)->update($updateData);
         }
 
-        return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công'], 200);
+        return response()->json(["success" => true, "message" => "Cập nhật thông tin thành công"], 200);
     }
 
     /**
@@ -99,15 +93,17 @@ class EmployeeController extends Controller
      */
     public function updateDepartment(Request $request, $id)
     {
-        $updated = DB::table('employees')->where('id', $id)->update([
-            'department_id' => $request->department,
-            'department' => $request->department
-        ]);
-
-        if ($updated) {
-            return response()->json(['success' => true, 'message' => 'Cập nhật tổ thành công'], 200);
+        // Frontend gửi tên chi nhánh (department) lên, ta tìm id của nó
+        $branch = DB::table('branches')->where('name', $request->department)->first();
+        
+        if ($branch) {
+            DB::table('employees')->where('employee_code', $id)->update([
+                'branch_id' => $branch->id,
+                'updated_at' => now()
+            ]);
+            return response()->json(["success" => true, "message" => "Cập nhật chi nhánh thành công"], 200);
         }
-
-        return response()->json(['success' => false, 'message' => 'Không tìm thấy nhân viên'], 404);
+        
+        return response()->json(["success" => false, "message" => "Không tìm thấy chi nhánh/tổ này"], 400);
     }
 }
