@@ -1,0 +1,170 @@
+{
+  "month": 10,
+  "year": 2023,
+  "totalWorkingDays": 31,
+  "dailyRecords": [
+    {
+      "date": "2023-10-18",
+      "summary": {
+        "expectedHeadcount": 8,
+        "actualHeadcount": 8,
+        "lateCount": 1,
+        "absentCount": 0,
+        "overrideCount": 1
+      },
+      "attendances": [
+        {
+          "employeeId": "EMP_B01",
+          "shiftId": "SHIFT_SANG",
+          "rawCheckIn": "07:55",
+          "rawCheckOut": "14:05",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_N01",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": "16:15",
+          "rawCheckOut": "23:10",
+          "status": "late",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_T01",
+          "shiftId": "SHIFT_SANG",
+          "rawCheckIn": null,
+          "rawCheckOut": null,
+          "status": "working",
+          "isOverridden": true,
+          "overrideDetails": {
+            "overriddenBy": "C2_NguyenThai",
+            "reason": "Quên chấm công",
+            "overrideTime": "2023-10-18T09:15:00Z"
+          }
+        },
+        {
+          "employeeId": "EMP_M01",
+          "shiftId": "SHIFT_SANG",
+          "rawCheckIn": "07:45",
+          "rawCheckOut": "14:30",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_O02",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": "15:50",
+          "rawCheckOut": "23:05",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_B02",
+          "shiftId": "SHIFT_FULL",
+          "rawCheckIn": "07:58",
+          "rawCheckOut": "23:15",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_R01",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": "15:45",
+          "rawCheckOut": "23:00",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_S01",
+          "shiftId": "SHIFT_FULL",
+          "rawCheckIn": "07:30",
+          "rawCheckOut": "23:30",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        }
+      ]
+    },
+    {
+      "date": "2023-10-19",
+      "summary": {
+        "expectedHeadcount": 7,
+        "actualHeadcount": 5,
+        "lateCount": 0,
+        "absentCount": 2,
+        "overrideCount": 0
+      },
+      "attendances": [
+        {
+          "employeeId": "EMP_B01",
+          "shiftId": "SHIFT_FULL",
+          "rawCheckIn": "07:50",
+          "rawCheckOut": "23:05",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_T01",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": null,
+          "rawCheckOut": null,
+          "status": "absent",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_BI01",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": "15:58",
+          "rawCheckOut": "23:02",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_M01",
+          "shiftId": "SHIFT_SANG",
+          "rawCheckIn": "07:55",
+          "rawCheckOut": "14:15",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_O02",
+          "shiftId": "SHIFT_CHIEU",
+          "rawCheckIn": null,
+          "rawCheckOut": null,
+          "status": "absent",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_B02",
+          "shiftId": "SHIFT_FULL",
+          "rawCheckIn": "07:45",
+          "rawCheckOut": "23:10",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        },
+        {
+          "employeeId": "EMP_S01",
+          "shiftId": "SHIFT_FULL",
+          "rawCheckIn": "07:35",
+          "rawCheckOut": "23:35",
+          "status": "working",
+          "isOverridden": false,
+          "overrideDetails": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "shiftCategories": [
+    { "id": "SHIFT_SANG", "name": "Ca Sáng", "startTime": "08:00", "endTime": "14:00" },
+    { "id": "SHIFT_CHIEU", "name": "Ca Chiều", "startTime": "16:00", "endTime": "23:00" },
+    { "id": "SHIFT_FULL", "name": "Ca Full", "startTime": "08:00", "endTime": "23:00", "breakTime": 2 }
+  ],
+  "rosters": [
+    {
+      "week": 42,
+      "startDate": "2023-10-16",
+      "endDate": "2023-10-22",
+      "assignments": [
+        {
+          "employeeId": "EMP_B01",
+          "schedule": {
+            "2023-10-16": "SHIFT_SANG",
+            "2023-10-17": "OFF",
+            "2023-10-18": "SHIFT_SANG",
+            "2023-10-19": "SHIFT_FULL"
+          }
+        },
+        {
+          "employeeId": "EMP_N01",
+          "schedule": {
+            "2023-10-16": "SHIFT_CHIEU",
+            "2023-10-17": "SHIFT_CHIEU",
+            "2023-10-18": "SHIFT_CHIEU",
+            "2023-10-19": "OFF"
+          }
+        },
+        {
+          "employeeId": "EMP_T01",
+          "schedule": {
+            "2023-10-16": "SHIFT_FULL",
+            "2023-10-17": "SHIFT_SANG",
+            "2023-10-18": "SHIFT_SANG",
+            "2023-10-19": "SHIFT_CHIEU"
+          }
+        },
+        {
+          "employeeId": "EMP_BI01",
+          "schedule": {
+            "2023-10-16": "SHIFT_CHIEU",
+            "2023-10-17": "SHIFT_CHIEU",
+            "2023-10-18": "OFF",
+            "2023-10-19": "SHIFT_CHIEU"
+          }
+        },
+        {
+          "employeeId": "EMP_M01",
+          "schedule": {
+            "2023-10-16": "SHIFT_SANG",
+            "2023-10-17": "SHIFT_SANG",
+            "2023-10-18": "SHIFT_SANG",
+            "2023-10-19": "SHIFT_SANG"
+          }
+        },
+        {
+          "employeeId": "EMP_O02",
+          "schedule": {
+            "2023-10-16": "SHIFT_CHIEU",
+            "2023-10-17": "SHIFT_CHIEU",
+            "2023-10-18": "SHIFT_CHIEU",
+            "2023-10-19": "SHIFT_CHIEU"
+          }
+        },
+        {
+          "employeeId": "EMP_B02",
+          "schedule": {
+            "2023-10-16": "SHIFT_FULL",
+            "2023-10-17": "SHIFT_FULL",
+            "2023-10-18": "SHIFT_FULL",
+            "2023-10-19": "SHIFT_FULL"
+          }
+        },
+        {
+          "employeeId": "EMP_R01",
+          "schedule": {
+            "2023-10-16": "OFF",
+            "2023-10-17": "SHIFT_CHIEU",
+            "2023-10-18": "SHIFT_CHIEU",
+            "2023-10-19": "OFF"
+          }
+        },
+        {
+          "employeeId": "EMP_S01",
+          "schedule": {
+            "2023-10-16": "SHIFT_FULL",
+            "2023-10-17": "SHIFT_FULL",
+            "2023-10-18": "SHIFT_FULL",
+            "2023-10-19": "SHIFT_FULL"
+          }
+        }
+      ]
+    }
+  ]
+}

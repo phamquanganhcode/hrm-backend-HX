@@ -1,0 +1,416 @@
+[
+  {
+    "id": "EMP_M01",
+    "personalInfo": { "fullName": "Nguyễn Ngọc Hà", "phone": "0901112233", "dob": "1988-04-10", "gender": "Nữ", "avatarUrl": "bg-purple-600" },
+    "employment": { "department": "Quản lý", "role": "Quản lý chung (QLT)", "level": "Quản lý", "joinDate": "2019-03-01", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_QL02",
+    "personalInfo": { "fullName": "Lương Đạt Hương", "phone": "0988000111", "dob": "1990-01-01", "gender": "Nữ", "avatarUrl": "bg-blue-500" },
+    "employment": { "department": "Quản lý", "role": "Kế toán trưởng (KTT)", "level": "Quản lý", "joinDate": "2020-05-10", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_QL03",
+    "personalInfo": { "fullName": "Văn Đình Hóa", "phone": "0988000112", "dob": "1992-02-02", "gender": "Nam", "avatarUrl": "bg-green-500" },
+    "employment": { "department": "Quản lý", "role": "Giám sát (GS)", "level": "Quản lý", "joinDate": "2021-06-15", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_QL04",
+    "personalInfo": { "fullName": "Bùi Văn Dương", "phone": "0988000113", "dob": "1991-03-03", "gender": "Nam", "avatarUrl": "bg-red-500" },
+    "employment": { "department": "Quản lý", "role": "Giám sát (GS)", "level": "Quản lý", "joinDate": "2021-07-20", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_QL05",
+    "personalInfo": { "fullName": "Nguyễn Thị Hoa", "phone": "0988000114", "dob": "1995-04-04", "gender": "Nữ", "avatarUrl": "bg-yellow-500" },
+    "employment": { "department": "Quản lý", "role": "Quỹ", "level": "Nhân viên", "joinDate": "2022-08-25", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_QL06",
+    "personalInfo": { "fullName": "Trần Thanh Xuân", "phone": "0988000115", "dob": "1996-05-05", "gender": "Nữ", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Quản lý", "role": "Quỹ", "level": "Nhân viên", "joinDate": "2022-09-30", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_QL07",
+    "personalInfo": { "fullName": "Thái Thị Son", "phone": "0988000116", "dob": "1994-06-06", "gender": "Nữ", "avatarUrl": "bg-indigo-500" },
+    "employment": { "department": "Quản lý", "role": "Thủ kho (TK)", "level": "Nhân viên", "joinDate": "2021-10-05", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_QL08",
+    "personalInfo": { "fullName": "KT Thuế", "phone": "0988000117", "dob": "1985-07-07", "gender": "Khác", "avatarUrl": "bg-gray-500" },
+    "employment": { "department": "Quản lý", "role": "Kế toán Thuế (KTT)", "level": "Nhân viên", "joinDate": "2020-11-10", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": false, "isLeader": false }
+  },
+  {
+    "id": "EMP_T01",
+    "personalInfo": { "fullName": "Đặng Thị Huyền", "phone": "0933445566", "dob": "2001-02-14", "gender": "Nữ", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Bàn", "role": "Order", "level": "Nhân viên", "joinDate": "2023-08-12", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": false, "isLeader": false }
+  },
+  {
+    "id": "EMP_O02",
+    "personalInfo": { "fullName": "Phạm Thị Anh", "phone": "0902223344", "dob": "2002-07-22", "gender": "Nữ", "avatarUrl": "bg-teal-500" },
+    "employment": { "department": "Bàn", "role": "Order", "level": "Nhân viên", "joinDate": "2023-09-01", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_OD03",
+    "personalInfo": { "fullName": "Phạm Thị Hạnh", "phone": "0988000118", "dob": "2003-08-08", "gender": "Nữ", "avatarUrl": "bg-orange-500" },
+    "employment": { "department": "Bàn", "role": "Order", "level": "Nhân viên", "joinDate": "2023-10-01", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_OD04",
+    "personalInfo": { "fullName": "Nguyễn Thị Hương (Order)", "phone": "0988000119", "dob": "2000-09-09", "gender": "Nữ", "avatarUrl": "bg-purple-500" },
+    "employment": { "department": "Bàn", "role": "Order", "level": "Nhân viên", "joinDate": "2023-10-05", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_OD05",
+    "personalInfo": { "fullName": "Dương T. Ngọc Thủy", "phone": "0988000120", "dob": "2001-10-10", "gender": "Nữ", "avatarUrl": "bg-blue-400" },
+    "employment": { "department": "Bàn", "role": "Order", "level": "Nhân viên", "joinDate": "2023-10-10", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_B01",
+    "personalInfo": { "fullName": "Vũ Thất Cáp", "phone": "0987654321", "dob": "1995-08-15", "gender": "Nam", "avatarUrl": "bg-indigo-600" },
+    "employment": { "department": "Bếp", "role": "Bếp chính", "level": "Trưởng ca", "joinDate": "2022-01-10", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_B02",
+    "personalInfo": { "fullName": "Bùi Xuân Trung", "phone": "0903334455", "dob": "1997-11-11", "gender": "Nam", "avatarUrl": "bg-red-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-05-15", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB03",
+    "personalInfo": { "fullName": "Lò Quang Đạo", "phone": "0988000121", "dob": "1998-11-11", "gender": "Nam", "avatarUrl": "bg-green-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-06-01", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB04",
+    "personalInfo": { "fullName": "Vũ Ngọc Mạnh", "phone": "0988000122", "dob": "1999-12-12", "gender": "Nam", "avatarUrl": "bg-yellow-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-07-05", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB05",
+    "personalInfo": { "fullName": "Nguyễn Trường Thành", "phone": "0988000123", "dob": "2000-01-13", "gender": "Nam", "avatarUrl": "bg-pink-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-08-10", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB06",
+    "personalInfo": { "fullName": "Mai Duy Hưởng (lại)", "phone": "0988000124", "dob": "1997-02-14", "gender": "Nam", "avatarUrl": "bg-purple-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-09-15", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB07",
+    "personalInfo": { "fullName": "Xa Văn Khôi", "phone": "0988000125", "dob": "1996-03-15", "gender": "Nam", "avatarUrl": "bg-indigo-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-10-20", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB08",
+    "personalInfo": { "fullName": "Đỗ Đức Dũng", "phone": "0988000126", "dob": "1995-04-16", "gender": "Nam", "avatarUrl": "bg-blue-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-11-25", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB09",
+    "personalInfo": { "fullName": "Trần Văn Hải", "phone": "0988000127", "dob": "1998-05-17", "gender": "Nam", "avatarUrl": "bg-teal-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2022-12-01", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB10",
+    "personalInfo": { "fullName": "Nguyễn Đăng Huy", "phone": "0988000128", "dob": "1999-06-18", "gender": "Nam", "avatarUrl": "bg-orange-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-01-05", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB11",
+    "personalInfo": { "fullName": "Tạ Văn Lưu", "phone": "0988000129", "dob": "2000-07-19", "gender": "Nam", "avatarUrl": "bg-red-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-02-10", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB12",
+    "personalInfo": { "fullName": "Cao Đình Anh", "phone": "0988000130", "dob": "2001-08-20", "gender": "Nam", "avatarUrl": "bg-green-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-03-15", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB13",
+    "personalInfo": { "fullName": "Mai Vinh Quang", "phone": "0988000131", "dob": "1997-09-21", "gender": "Nam", "avatarUrl": "bg-yellow-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-04-20", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB14",
+    "personalInfo": { "fullName": "Trần Tuấn Kiệt", "phone": "0988000132", "dob": "1998-10-22", "gender": "Nam", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-05-25", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB15",
+    "personalInfo": { "fullName": "Cao Đình Bằng", "phone": "0988000133", "dob": "1999-11-23", "gender": "Nam", "avatarUrl": "bg-purple-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-06-30", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BB16",
+    "personalInfo": { "fullName": "Trịnh Đô Cường", "phone": "0988000134", "dob": "2000-12-24", "gender": "Nam", "avatarUrl": "bg-indigo-500" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Bia", "level": "Nhân viên", "joinDate": "2023-07-05", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_N01",
+    "personalInfo": { "fullName": "Đinh Văn Lùng", "phone": "0912345678", "dob": "1998-05-20", "gender": "Nam", "avatarUrl": "bg-orange-500" },
+    "employment": { "department": "Nướng", "role": "Bếp trưởng (BT)", "level": "Trưởng ca", "joinDate": "2022-11-05", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": true }
+  },
+  {
+    "id": "EMP_BN02",
+    "personalInfo": { "fullName": "Lương Đức Bình", "phone": "0988000135", "dob": "1999-01-25", "gender": "Nam", "avatarUrl": "bg-blue-500" },
+    "employment": { "department": "Nướng", "role": "Nhân viên Nướng", "level": "Nhân viên", "joinDate": "2023-01-10", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BN03",
+    "personalInfo": { "fullName": "Lương Đức Dự", "phone": "0988000136", "dob": "2000-02-26", "gender": "Nam", "avatarUrl": "bg-teal-500" },
+    "employment": { "department": "Nướng", "role": "Nhân viên Nướng", "level": "Nhân viên", "joinDate": "2023-02-15", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BN04",
+    "personalInfo": { "fullName": "Vũ Đức Anh", "phone": "0988000137", "dob": "2001-03-27", "gender": "Nam", "avatarUrl": "bg-red-500" },
+    "employment": { "department": "Nướng", "role": "Nhân viên Nướng", "level": "Nhân viên", "joinDate": "2023-03-20", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BT01",
+    "personalInfo": { "fullName": "Lê Viết Sơn", "phone": "0988000138", "dob": "1995-04-28", "gender": "Nam", "avatarUrl": "bg-green-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Trâu", "level": "Nhân viên", "joinDate": "2022-04-25", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BT02",
+    "personalInfo": { "fullName": "Trần Trọng Hiếu", "phone": "0988000139", "dob": "1996-05-29", "gender": "Nam", "avatarUrl": "bg-yellow-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Trâu", "level": "Nhân viên", "joinDate": "2022-05-30", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BT03",
+    "personalInfo": { "fullName": "Phạm Phúc Đức", "phone": "0988000140", "dob": "1997-06-30", "gender": "Nam", "avatarUrl": "bg-pink-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Bếp Trâu", "level": "Nhân viên", "joinDate": "2022-06-05", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_SA01",
+    "personalInfo": { "fullName": "Nguyễn Thị Lý", "phone": "0988000141", "dob": "1990-07-01", "gender": "Nữ", "avatarUrl": "bg-purple-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Salat", "level": "Nhân viên", "joinDate": "2021-07-10", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_SA02",
+    "personalInfo": { "fullName": "Vũ Thị Kim Tuyến", "phone": "0988000142", "dob": "1992-08-02", "gender": "Nữ", "avatarUrl": "bg-indigo-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên Salat", "level": "Nhân viên", "joinDate": "2021-08-15", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_SA03",
+    "personalInfo": { "fullName": "Đứng nấu cơm", "phone": "0988000143", "dob": "1985-09-03", "gender": "Khác", "avatarUrl": "bg-blue-600" },
+    "employment": { "department": "Bếp", "role": "Nhân viên nấu cơm", "level": "Nhân viên", "joinDate": "2021-09-20", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": false, "isLeader": false }
+  },
+  {
+    "id": "EMP_HV01",
+    "personalInfo": { "fullName": "Dương Tiến Đỉnh", "phone": "0988000144", "dob": "2005-10-04", "gender": "Nam", "avatarUrl": "bg-teal-600" },
+    "employment": { "department": "Bếp", "role": "Học việc", "level": "Học việc", "joinDate": "2023-08-01", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_HV02",
+    "personalInfo": { "fullName": "Lương Tiến Vinh", "phone": "0988000145", "dob": "2006-11-05", "gender": "Nam", "avatarUrl": "bg-orange-600" },
+    "employment": { "department": "Bếp", "role": "Học việc", "level": "Học việc", "joinDate": "2023-08-10", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_HV03",
+    "personalInfo": { "fullName": "Nông Thị Tươi", "phone": "0988000146", "dob": "2000-12-06", "gender": "Nữ", "avatarUrl": "bg-red-600" },
+    "employment": { "department": "Bếp", "role": "Kho", "level": "Nhân viên", "joinDate": "2023-08-15", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_R01",
+    "personalInfo": { "fullName": "Nguyễn Thị Hương", "phone": "0904445566", "dob": "2003-01-05", "gender": "Nữ", "avatarUrl": "bg-yellow-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-10-01", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": false, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB02",
+    "personalInfo": { "fullName": "Lương Thị Hải (Hải cơ)", "phone": "0988000147", "dob": "2001-02-07", "gender": "Nữ", "avatarUrl": "bg-green-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-09-05", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB03",
+    "personalInfo": { "fullName": "Triệu Kim Hòi", "phone": "0988000148", "dob": "2002-03-08", "gender": "Nam", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-09-10", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB04",
+    "personalInfo": { "fullName": "Triệu Quang Hà", "phone": "0988000149", "dob": "2000-04-09", "gender": "Nam", "avatarUrl": "bg-purple-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-09-15", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB05",
+    "personalInfo": { "fullName": "Vàng Mí Say", "phone": "0988000150", "dob": "1999-05-10", "gender": "Nam", "avatarUrl": "bg-indigo-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-09-20", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB06",
+    "personalInfo": { "fullName": "Quẩy Phượng Pừ", "phone": "0988000151", "dob": "2001-06-11", "gender": "Nam", "avatarUrl": "bg-blue-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-09-25", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB07",
+    "personalInfo": { "fullName": "Lùn Ngọc Ngân", "phone": "0988000152", "dob": "2002-07-12", "gender": "Nữ", "avatarUrl": "bg-teal-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-10-05", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB08",
+    "personalInfo": { "fullName": "Vừ Mí Xhưa", "phone": "0988000153", "dob": "2000-08-13", "gender": "Nam", "avatarUrl": "bg-orange-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-10-10", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_CB09",
+    "personalInfo": { "fullName": "Đới Văn Lung", "phone": "0988000154", "dob": "1998-09-14", "gender": "Nam", "avatarUrl": "bg-red-500" },
+    "employment": { "department": "Bàn", "role": "Nhân viên chạy bàn", "level": "Nhân viên", "joinDate": "2023-10-15", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI01",
+    "personalInfo": { "fullName": "Thào Mí Hờ", "phone": "0966778899", "dob": "2000-12-01", "gender": "Nam", "avatarUrl": "bg-blue-400" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2024-01-20", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI02",
+    "personalInfo": { "fullName": "Vàng Mí Chơ (Chiến)", "phone": "0988000155", "dob": "2001-10-15", "gender": "Nam", "avatarUrl": "bg-green-500" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-01", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI03",
+    "personalInfo": { "fullName": "Hà Duy Khánh", "phone": "0988000156", "dob": "1999-11-16", "gender": "Nam", "avatarUrl": "bg-yellow-500" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-05", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI04",
+    "personalInfo": { "fullName": "Cứ Mí Say", "phone": "0988000157", "dob": "2000-12-17", "gender": "Nam", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-10", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI05",
+    "personalInfo": { "fullName": "Hà Văn Đại", "phone": "0988000158", "dob": "1998-01-18", "gender": "Nam", "avatarUrl": "bg-purple-500" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-15", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI06",
+    "personalInfo": { "fullName": "Vũ Văn Tính (Bé)", "phone": "0988000159", "dob": "2002-02-19", "gender": "Nam", "avatarUrl": "bg-indigo-500" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-20", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BI07",
+    "personalInfo": { "fullName": "Cứ Mí Hiểu", "phone": "0988000160", "dob": "2001-03-20", "gender": "Nam", "avatarUrl": "bg-blue-600" },
+    "employment": { "department": "Bia", "role": "Nhân viên Bia", "level": "Nhân viên", "joinDate": "2023-11-25", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_TV01",
+    "personalInfo": { "fullName": "Nguyễn Thị Vân Anh", "phone": "0988000161", "dob": "1980-04-21", "gender": "Nữ", "avatarUrl": "bg-teal-600" },
+    "employment": { "department": "Tạp vụ", "role": "Tạp vụ", "level": "Nhân viên", "joinDate": "2020-01-05", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_TV02",
+    "personalInfo": { "fullName": "Phạm Thị Tắng", "phone": "0988000162", "dob": "1982-05-22", "gender": "Nữ", "avatarUrl": "bg-orange-600" },
+    "employment": { "department": "Tạp vụ", "role": "Tạp vụ", "level": "Nhân viên", "joinDate": "2020-02-10", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_TV03",
+    "personalInfo": { "fullName": "Phương Thị Đực", "phone": "0988000163", "dob": "1978-06-23", "gender": "Nữ", "avatarUrl": "bg-red-600" },
+    "employment": { "department": "Tạp vụ", "role": "Tạp vụ", "level": "Nhân viên", "joinDate": "2020-03-15", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_TV04",
+    "personalInfo": { "fullName": "Hoàng Thị Uay", "phone": "0988000164", "dob": "1985-07-24", "gender": "Nữ", "avatarUrl": "bg-green-500" },
+    "employment": { "department": "Tạp vụ", "role": "Tạp vụ", "level": "Nhân viên", "joinDate": "2020-04-20", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_TV05",
+    "personalInfo": { "fullName": "Tô Thị Chiên", "phone": "0988000165", "dob": "1988-08-25", "gender": "Nữ", "avatarUrl": "bg-yellow-500" },
+    "employment": { "department": "Tạp vụ", "role": "Tạp vụ", "level": "Nhân viên", "joinDate": "2020-05-25", "status": "ACTIVE", "fixedOffDays": [1] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_S01",
+    "personalInfo": { "fullName": "Nguyễn Văn Đáng", "phone": "0905556677", "dob": "1975-09-09", "gender": "Nam", "avatarUrl": "bg-gray-600" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-02-20", "status": "ACTIVE", "fixedOffDays": [0] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BV02",
+    "personalInfo": { "fullName": "Huỳnh Cùn", "phone": "0988000166", "dob": "1972-10-26", "gender": "Nam", "avatarUrl": "bg-pink-500" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-03-05", "status": "ACTIVE", "fixedOffDays": [2] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BV03",
+    "personalInfo": { "fullName": "Nguyễn Xuân Việt", "phone": "0988000167", "dob": "1976-11-27", "gender": "Nam", "avatarUrl": "bg-purple-500" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-04-10", "status": "ACTIVE", "fixedOffDays": [3] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BV04",
+    "personalInfo": { "fullName": "Nguyễn Văn Ái", "phone": "0988000168", "dob": "1974-12-28", "gender": "Nam", "avatarUrl": "bg-indigo-500" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-05-15", "status": "ACTIVE", "fixedOffDays": [4] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BV05",
+    "personalInfo": { "fullName": "Hoàng Văn Tùng", "phone": "0988000169", "dob": "1980-01-29", "gender": "Nam", "avatarUrl": "bg-blue-500" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-06-20", "status": "ACTIVE", "fixedOffDays": [5] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  },
+  {
+    "id": "EMP_BV06",
+    "personalInfo": { "fullName": "Nguyễn Xuân Giao", "phone": "0988000170", "dob": "1978-02-28", "gender": "Nam", "avatarUrl": "bg-teal-500" },
+    "employment": { "department": "Bảo vệ", "role": "Nhân viên Bảo vệ", "level": "Nhân viên", "joinDate": "2021-07-25", "status": "ACTIVE", "fixedOffDays": [6] },
+    "systemConfigs": { "faceIdRegistered": true, "isLeader": false }
+  }
+]
