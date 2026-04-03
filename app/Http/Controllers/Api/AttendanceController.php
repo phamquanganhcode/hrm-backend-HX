@@ -6,9 +6,121 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Events\AttendanceRealtimeEvent;
+use App\Models\Employee;
+use App\Models\DailyAttendance;
+use App\Models\AttendanceSession;
 
 class AttendanceController extends Controller
 {
+    /**
+     * Nhận dữ liệu đồng bộ từ máy chấm công (hoặc tool giả lập Python)
+     * Tương đương: @app.post("/api/v1/attendance/sync")
+     */
+    public function sync(Request $request)
+    {
+        // 1. Kiểm tra khóa bảo mật
+        if ($request->secret_key !== 'HoiBaoMat_ChiCuaHangMoiBiet') {
+            return response()->json(['status' => 'error', 'message' => 'Sai khóa bảo mật!'], 401);
+        }
+
+        $logs = $request->input('logs', []);
+        $insertedCount = 0;
+        $debugMessages = []; // Mảng lưu lý do bị lỗi để báo về Tool Python
+
+        foreach ($logs as $log) {
+            $empCode = $log['employee_code'] ?? 'Không xác định';
+            $emp = Employee::where('employee_code', $empCode)->first();
+            
+            // LỖI 1: Không tìm thấy nhân viên trong DB
+            if (!$emp) {
+                $debugMessages[] = "Mã [$empCode] không tồn tại trong CSDL MySQL.";
+                continue; 
+            }
+
+            $scanTime = Carbon::parse($log['check_time']);
+            $timeFloat = $scanTime->hour + ($scanTime->minute / 60.0);
+
+            $shiftType = null;
+            $actionType = null;
+            $logicalDate = $scanTime->format('Y-m-d');
+
+            // 2. Phân loại ca
+            if ($timeFloat >= 7.0 && $timeFloat <= 10.5) {
+                $shiftType = 'CA_TRUA'; $actionType = 'IN';
+            } elseif ($timeFloat >= 13.5 && $timeFloat <= 15.0) {
+                $shiftType = 'CA_TRUA'; $actionType = 'OUT';
+            } elseif ($timeFloat >= 15.5 && $timeFloat <= 17.5) {
+                $shiftType = 'CA_TOI';  $actionType = 'IN';
+            } elseif ($timeFloat >= 20.5 || $timeFloat <= 3.0) {
+                $shiftType = 'CA_TOI';  $actionType = 'OUT';
+                if ($timeFloat <= 3.0) {
+                    $logicalDate = $scanTime->copy()->subDay()->format('Y-m-d');
+                }
+            } else {
+                // LỖI 2: Quẹt ngoài khung giờ cho phép
+                $debugMessages[] = "Nhân viên [$empCode] bị loại vì quẹt lúc " . $log['check_time'] . " (Ngoài khung giờ ca).";
+                continue; 
+            }
+
+            // 3. TẠO BẢN GHI
+            $record = DailyAttendance::firstOrCreate(
+                ['employee_id' => $emp->id, 'date' => $logicalDate],
+                [
+                    'actual_branch_id' => $request->branch_id ?? 1, 
+                    'status' => 'normal', 
+                    'is_holiday' => false, 
+                    'is_manually_adjusted' => false
+                ]
+            );
+
+            // 4. LƯU CHI TIẾT
+            if (!$record->is_manually_adjusted) {
+                $session = AttendanceSession::firstOrCreate([
+                    'employee_id'         => $emp->id,
+                    'daily_attendance_id' => $record->id,
+                    'date'                => $logicalDate,
+                ]);
+
+                if ($actionType === 'IN') {
+                    if (!$session->check_in_time || $scanTime->lt(Carbon::parse($session->check_in_time))) {
+                        $session->check_in_time = $scanTime;
+                    }
+                } else {
+                    if (!$session->check_out_time || $scanTime->gt(Carbon::parse($session->check_out_time))) {
+                        $session->check_out_time = $scanTime;
+                    }
+                }
+                $session->save();
+                $record->touch();
+            }
+
+            $insertedCount++;
+
+            // 5. BẮN PUSHER
+            broadcast(new AttendanceRealtimeEvent([
+                'message' => 'Có người vừa quẹt thẻ!',
+                'employee_code' => $emp->employee_code,
+                'employee_name' => $emp->full_name ?? 'Nhân viên ' . $emp->employee_code,
+                'check_time' => $log['check_time'],
+                'image' => $log['image'] ?? null
+            ]))->toOthers();
+        }
+
+        // Tùy biến câu trả lời để hiển thị log rõ ràng
+        if ($insertedCount == 0) {
+            $reason = implode(" | ", $debugMessages);
+            $msg = "Đã đồng bộ 0 lần quẹt thẻ. LÝ DO: " . $reason;
+        } else {
+            $msg = "Đã đồng bộ $insertedCount lần quẹt thẻ thành công!";
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $msg
+        ], 200);
+    }
+
     /**
      * Lấy dữ liệu chấm công của 1 ngày
      * Tương đương: @app.get("/api/attendance/{date}")
@@ -34,7 +146,6 @@ class AttendanceController extends Controller
             ->keyBy('id');
 
         // 3. Lấy LOG QUẸT THẺ (Từ máy chấm công)
-        // Vì hệ thống lưu log thô, ta sẽ tìm giờ quét sớm nhất (CheckIn) và muộn nhất (CheckOut)
         $fingerprintIds = $employees->pluck('fingerprint_id')->filter()->toArray();
         $timeLogsRaw = DB::table('time_logs')
             ->whereDate('timestamp', $date)
@@ -94,7 +205,7 @@ class AttendanceController extends Controller
                 'isOverridden' => $isOverridden,
                 'overrideDetails' => $isOverridden ? [
                     'reason' => $att->note ?? 'Đã chỉnh sửa thủ công',
-                    'overriddenBy' => 'Quản lý' // Có thể mở rộng lấy user đăng nhập sau
+                    'overriddenBy' => 'Quản lý'
                 ] : null,
                 'timeLogs' => empty($logs) ? [['rawCheckIn' => null, 'rawCheckOut' => null, 'isLateIn' => false, 'isEarlyOut' => false]] : $logs,
                 'personalInfo' => [
@@ -123,7 +234,7 @@ class AttendanceController extends Controller
         $reason = $request->input('reason');
         $reqTimeLogs = $request->input('timeLogs');
 
-        $emp = DB::table('employees')->where('employee_code', $empCode)->first();
+        $emp = Employee::where('employee_code', $empCode)->first();
         if (!$emp) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy nhân viên'], 404);
         }
@@ -133,7 +244,7 @@ class AttendanceController extends Controller
         DB::beginTransaction();
         try {
             // 1. Cập nhật bảng Daily Attendances (Đã chốt)
-            $att = DB::table('daily_attendances')->where('date', $date)->where('employee_id', $emp->id)->first();
+            $att = DailyAttendance::where('date', $date)->where('employee_id', $emp->id)->first();
 
             $attData = [
                 'employee_id' => $emp->id,
@@ -147,10 +258,10 @@ class AttendanceController extends Controller
             ];
 
             if ($att) {
-                DB::table('daily_attendances')->where('id', $att->id)->update($attData);
+                $att->update($attData);
             } else {
                 $attData['created_at'] = now();
-                DB::table('daily_attendances')->insert($attData);
+                DailyAttendance::insert($attData);
             }
 
             // 2. Chèn Log giả lập vào bảng Time Logs (Nếu quản lý có sửa cả giờ)

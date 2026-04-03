@@ -14,60 +14,64 @@ use App\Http\Controllers\Api\AttendanceController;
 Route::prefix('v1')->group(function () {
     
     // ==========================================
-    // 1. Module Auth & Profile
+    // 1. PUBLIC ROUTES (Không yêu cầu đăng nhập)
     // ==========================================
-    Route::prefix('auth')->group(function () {
-        Route::post('/login', [AuthController::class, 'login']);
-    });
+    
+    // Đăng nhập
+    Route::post('/auth/login', [AuthController::class, 'login']);
 
-    // 🟢 ROUTE CHO MÁY CHẤM CÔNG (Không cần Token, chỉ cần Secret Key)
+    // Route cho Máy chấm công (Giao tiếp qua Secret Key riêng, không dùng Token User)
     Route::post('/attendance/sync', [AttendanceController::class, 'sync']);
     
-    // ==========================================
-    // 2. API CHO MANAGER (ĐÃ NỐI 100% CSDL THẬT)
-    // Lưu ý: Tạm để ngoài middleware auth:sanctum để test giao diện không bị 401
-    // ==========================================
     
-    // -- NHÂN SỰ --
-    Route::get('/employees', [EmployeeController::class, 'index']);
-    Route::put('/employees/{id}', [EmployeeController::class, 'update']);
-    Route::put('/employees/{id}/department', [EmployeeController::class, 'updateDepartment']);
-
-    // -- TỔ LÀM VIỆC --
-    Route::get('/departments', [DepartmentController::class, 'index']);
-    Route::post('/departments', [DepartmentController::class, 'store']);
-    Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
-
-    // -- CA LÀM VIỆC --
-    Route::get('/shifts', [ShiftController::class, 'index']);
-    Route::post('/shifts', [ShiftController::class, 'store']);
-
-    // -- XẾP LỊCH --
-    Route::get('/schedules/scheduled-dates', [ScheduleController::class, 'getScheduledDates']);
-    Route::get('/schedule/{date}', [ScheduleController::class, 'getByDate']);
-    Route::post('/schedule/{date}', [ScheduleController::class, 'updateByDate']);
-
-    // -- CHẤM CÔNG & GHI ĐÈ --
-    Route::get('/attendance/{date}', [AttendanceController::class, 'getByDate']);
-    Route::post('/attendance/override', [AttendanceController::class, 'override']);
-
-
     // ==========================================
-    // 3. CÁC ROUTE YÊU CẦU ĐĂNG NHẬP (CÓ TOKEN)
+    // 2. PROTECTED ROUTES (BẮT BUỘC CÓ TOKEN)
     // ==========================================
     Route::middleware('auth:sanctum')->group(function () {
+        
+        // -- AUTH & PROFILE --
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
 
-        // 🟢 API CHẤM CÔNG (Dành cho Dashboard cá nhân hoặc Realtime)
+        // ==========================================
+        // API CHO MANAGER (Đã đưa vào trong Auth để hàm auth()->user() hoạt động)
+        // ==========================================
+        
+        // -- NHÂN SỰ --
+        Route::get('/employees', [EmployeeController::class, 'index']);
+        Route::put('/employees/{id}', [EmployeeController::class, 'update']);
+        Route::put('/employees/{id}/department', [EmployeeController::class, 'updateDepartment']);
+
+        // -- TỔ LÀM VIỆC --
+        Route::get('/departments', [DepartmentController::class, 'index']);
+        Route::post('/departments', [DepartmentController::class, 'store']);
+        Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
+
+        // -- CA LÀM VIỆC --
+        Route::get('/shifts', [ShiftController::class, 'index']);
+        Route::post('/shifts', [ShiftController::class, 'store']);
+
+        // -- XẾP LỊCH --
+        Route::get('/schedules/scheduled-dates', [ScheduleController::class, 'getScheduledDates']);
+        Route::get('/schedule/{date}', [ScheduleController::class, 'getByDate']);
+        Route::post('/schedule/{date}', [ScheduleController::class, 'updateByDate']);
+
+        // -- CHẤM CÔNG & GHI ĐÈ BỞI QUẢN LÝ --
+        Route::get('/attendance/{date}', [AttendanceController::class, 'getByDate']);
+        Route::post('/attendance/override', [AttendanceController::class, 'override']);
+
+
+        // ==========================================
+        // API DÀNH CHO NHÂN VIÊN (Employee App)
+        // ==========================================
+        
+        // -- CHẤM CÔNG CÁ NHÂN --
         Route::get('/daily-attendances', [AttendanceController::class, 'getDailyAttendances']);
         Route::get('/time-logs/realtime', [AttendanceController::class, 'getRealtimeLogs']);
         Route::post('/time-logs/exception', [AttendanceController::class, 'updateException']);
         
-        // ==========================================
-        // MOCK API: Đỡ đạn cho Frontend Employee khỏi bị Crash
-        // ==========================================
+        // -- MOCK API CÁ NHÂN (Tránh lỗi Crash giao diện Frontend) --
         Route::get('/work-schedules', function() {
             return response()->json(['status' => 'success', 'data' => []], 200);
         });
