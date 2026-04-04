@@ -49,7 +49,12 @@ class ShiftController extends Controller
             ];
         });
 
-        return response()->json(['shiftCategories' => $formatted], 200);
+        // SỬA DÒNG NÀY: Trả về cả 'data' (cho trang Xếp ca) và 'shiftCategories' (cho trang Cấu hình ca)
+        return response()->json([
+            'status' => 'success',
+            'data' => $formatted, 
+            'shiftCategories' => $formatted 
+        ], 200);
     }
 
     /**

@@ -53,9 +53,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/shifts', [ShiftController::class, 'store']);
 
         // -- XẾP LỊCH --
-        Route::get('/schedules/scheduled-dates', [ScheduleController::class, 'getScheduledDates']);
-        Route::get('/schedule/{date}', [ScheduleController::class, 'getByDate']);
-        Route::post('/schedule/{date}', [ScheduleController::class, 'updateByDate']);
+        // Dùng chung 1 link cho cả GET và POST, sử dụng query/body payload thay vì /{date}
+        Route::get('/schedules/dates', [ScheduleController::class, 'getScheduledDates']); // Lấy các ngày có lịch (Chấm xanh)
+        Route::get('/schedules', [ScheduleController::class, 'getByDate']);               // Đọc lịch theo ngày (GET ?date=...)
+        Route::post('/schedules', [ScheduleController::class, 'updateByDate']);           // Ghi đè lịch (POST)
 
         // -- CHẤM CÔNG & GHI ĐÈ BỞI QUẢN LÝ --
         Route::get('/attendance/{date}', [AttendanceController::class, 'getByDate']);
