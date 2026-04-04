@@ -15,55 +15,32 @@ class AttendanceController extends Controller
 {
     /**
      * Nhận dữ liệu đồng bộ từ máy chấm công (hoặc tool giả lập Python)
-     * Tương đương: @app.post("/api/v1/attendance/sync")
      */
     public function sync(Request $request)
     {
-        // 1. Kiểm tra khóa bảo mật
         if ($request->secret_key !== 'HoiBaoMat_ChiCuaHangMoiBiet') {
             return response()->json(['status' => 'error', 'message' => 'Sai khóa bảo mật!'], 401);
         }
 
         $logs = $request->input('logs', []);
         $insertedCount = 0;
-        $debugMessages = []; // Mảng lưu lý do bị lỗi để báo về Tool Python
 
         foreach ($logs as $log) {
             $empCode = $log['employee_code'] ?? 'Không xác định';
             $emp = Employee::where('employee_code', $empCode)->first();
             
-            // LỖI 1: Không tìm thấy nhân viên trong DB
-            if (!$emp) {
-                $debugMessages[] = "Mã [$empCode] không tồn tại trong CSDL MySQL.";
-                continue; 
-            }
+            if (!$emp) continue; 
 
             $scanTime = Carbon::parse($log['check_time']);
-            $timeFloat = $scanTime->hour + ($scanTime->minute / 60.0);
-
-            $shiftType = null;
-            $actionType = null;
             $logicalDate = $scanTime->format('Y-m-d');
-
-            // 2. Phân loại ca
-            if ($timeFloat >= 7.0 && $timeFloat <= 10.5) {
-                $shiftType = 'CA_TRUA'; $actionType = 'IN';
-            } elseif ($timeFloat >= 13.5 && $timeFloat <= 15.0) {
-                $shiftType = 'CA_TRUA'; $actionType = 'OUT';
-            } elseif ($timeFloat >= 15.5 && $timeFloat <= 17.5) {
-                $shiftType = 'CA_TOI';  $actionType = 'IN';
-            } elseif ($timeFloat >= 20.5 || $timeFloat <= 3.0) {
-                $shiftType = 'CA_TOI';  $actionType = 'OUT';
-                if ($timeFloat <= 3.0) {
-                    $logicalDate = $scanTime->copy()->subDay()->format('Y-m-d');
-                }
-            } else {
-                // LỖI 2: Quẹt ngoài khung giờ cho phép
-                $debugMessages[] = "Nhân viên [$empCode] bị loại vì quẹt lúc " . $log['check_time'] . " (Ngoài khung giờ ca).";
-                continue; 
+            $minutes = $scanTime->hour * 60 + $scanTime->minute;
+            
+            // Xử lý qua nửa đêm
+            if ($minutes <= 180) {
+                $logicalDate = $scanTime->copy()->subDay()->format('Y-m-d');
             }
 
-            // 3. TẠO BẢN GHI
+            // TẠO BẢN GHI
             $record = DailyAttendance::firstOrCreate(
                 ['employee_id' => $emp->id, 'date' => $logicalDate],
                 [
@@ -74,81 +51,69 @@ class AttendanceController extends Controller
                 ]
             );
 
-            // 4. LƯU CHI TIẾT
+            // LƯU CHI TIẾT VÀO TIME_LOGS
             if (!$record->is_manually_adjusted) {
-                $session = AttendanceSession::firstOrCreate([
-                    'employee_id'         => $emp->id,
-                    'daily_attendance_id' => $record->id,
-                    'date'                => $logicalDate,
-                ]);
-
-                if ($actionType === 'IN') {
-                    if (!$session->check_in_time || $scanTime->lt(Carbon::parse($session->check_in_time))) {
-                        $session->check_in_time = $scanTime;
-                    }
-                } else {
-                    if (!$session->check_out_time || $scanTime->gt(Carbon::parse($session->check_out_time))) {
-                        $session->check_out_time = $scanTime;
-                    }
+                // 1. Ép cấp vân tay 
+                $fingerprintId = $emp->fingerprint_id ?? $emp->id;
+                if (!$emp->fingerprint_id) {
+                    DB::table('employees')->where('id', $emp->id)->update(['fingerprint_id' => $fingerprintId]);
                 }
-                $session->save();
+
+                // 2. Xử lý Máy chấm công an toàn tuyệt đối
+                $machine = DB::table('timekeep_machines')->first();
+                
+                if ($machine) {
+                    $machineId = $machine->id;
+                } else {
+                    // Nếu chưa có máy nào, tự động đẻ ra máy ảo
+                    $machineId = DB::table('timekeep_machines')->insertGetId([
+                        'name' => 'Máy giả lập',
+                        'branch_id' => $emp->branch_id,
+                        'status' => 'active',
+                        'created_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                        'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s')
+                    ]);
+                }
+
+                // 3. Chèn giờ trực tiếp
+                DB::table('time_logs')->insert([
+                    'machine_id' => $machineId,
+                    'fingerprint_id' => $fingerprintId,
+                    'timestamp' => $scanTime->format('Y-m-d H:i:s'),
+                    'created_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                    'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s')
+                ]);
                 $record->touch();
             }
 
             $insertedCount++;
 
-            // 5. BẮN PUSHER
+            // BẮN PUSHER LÊN FRONTEND
             broadcast(new AttendanceRealtimeEvent([
                 'message' => 'Có người vừa quẹt thẻ!',
                 'employee_code' => $emp->employee_code,
                 'employee_name' => $emp->full_name ?? 'Nhân viên ' . $emp->employee_code,
-                'check_time' => $log['check_time'],
+                'check_time' => $scanTime->format('H:i'), // Rút gọn thời gian hiển thị trên popup
                 'image' => $log['image'] ?? null
             ]))->toOthers();
         }
 
-        // Tùy biến câu trả lời để hiển thị log rõ ràng
-        if ($insertedCount == 0) {
-            $reason = implode(" | ", $debugMessages);
-            $msg = "Đã đồng bộ 0 lần quẹt thẻ. LÝ DO: " . $reason;
-        } else {
-            $msg = "Đã đồng bộ $insertedCount lần quẹt thẻ thành công!";
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => $msg
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => "Đồng bộ $insertedCount bản ghi!"], 200);
     }
 
-    /**
-     * Lấy dữ liệu chấm công của 1 ngày
-     * Tương đương: @app.get("/api/attendance/{date}")
-     */
     public function getByDate($date)
     {
-        // 1. Xác định người đang đăng nhập & Chi nhánh của họ
         $user = auth()->user();
-        // Lấy thông tin nhân viên gắn với tài khoản này
         $currentEmp = DB::table('employees')->where('id', $user->employee_id)->first();
         
-        // 2. Khởi tạo Query cơ bản
         $schedulesQuery = DB::table('work_schedules')->where('date', $date)->whereNull('deleted_at');
         $attendancesQuery = DB::table('daily_attendances')->where('date', $date)->whereNull('deleted_at');
 
-        // 3. LOGIC PHÂN QUYỀN: Nếu là C1/C2 -> Chỉ lọc nhân viên thuộc chi nhánh mình quản lý
-        if ($user && in_array($user->role, ['C1', 'C2']) && $currentEmp) {
+        if ($user && in_array(strtoupper($user->role), ['C1', 'C2', '1', '2']) && $currentEmp) {
             $branchId = $currentEmp->branch_id;
-
-            // Lọc lịch trình: Chỉ lấy lịch của nhân viên thuộc branch_id này
             $schedulesQuery->whereExists(function ($query) use ($branchId) {
-                $query->select(DB::raw(1))
-                    ->from('employees')
-                    ->whereColumn('employees.id', 'work_schedules.employee_id')
-                    ->where('employees.branch_id', $branchId);
+                $query->select(DB::raw(1))->from('employees')->whereColumn('employees.id', 'work_schedules.employee_id')->where('employees.branch_id', $branchId);
             });
-
-            // Lọc chấm công: Chỉ lấy bản ghi chấm công tại chi nhánh này
             $attendancesQuery->where('actual_branch_id', $branchId);
         }
 
@@ -156,26 +121,20 @@ class AttendanceController extends Controller
         $attendances = $attendancesQuery->get();
         $attDict = $attendances->keyBy('employee_id');
 
-        // 4. Xác định danh sách ID nhân viên cần hiển thị (Có lịch HOẶC có đi làm)
-        $empIds = collect($schedules->pluck('employee_id'))
-                    ->merge($attendances->pluck('employee_id'))
-                    ->unique();
+        $empIds = collect($schedules->pluck('employee_id'))->merge($attendances->pluck('employee_id'))->unique();
 
-        // 5. Lấy thông tin chi tiết nhân viên & Log quẹt thẻ
         $employees = DB::table('employees')
             ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
             ->whereIn('employees.id', $empIds)
-            ->select('employees.*', 'branches.name as branch_name')
+            ->select('employees.*', 'branches.name as branch_name', 'employees.department as department')
             ->get()
             ->keyBy('id');
 
-        $fingerprintIds = $employees->pluck('fingerprint_id')->filter()->toArray();
+        // Lấy toàn bộ log trong ngày 
         $timeLogsRaw = DB::table('time_logs')
             ->whereDate('timestamp', $date)
-            ->whereIn('fingerprint_id', $fingerprintIds)
             ->whereNull('deleted_at')
-            ->get()
-            ->groupBy('fingerprint_id');
+            ->get();
 
         $records = [];
 
@@ -186,28 +145,49 @@ class AttendanceController extends Controller
             $att = $attDict->get($empId);
             $sched = $schedules->firstWhere('employee_id', $empId);
 
-            // --- XỬ LÝ LOG QUẸT THẺ REALTIME ---
-            $logs = [];
-            $rawCheckIn = null;
-            $rawCheckOut = null;
-            
-            if ($emp->fingerprint_id && $timeLogsRaw->has($emp->fingerprint_id)) {
-                $empLogs = $timeLogsRaw->get($emp->fingerprint_id);
-                $minTime = $empLogs->min('timestamp');
-                $maxTime = $empLogs->max('timestamp');
-                
-                $rawCheckIn = Carbon::parse($minTime)->format('H:i');
-                $rawCheckOut = ($minTime !== $maxTime) ? Carbon::parse($maxTime)->format('H:i') : null;
+            $milestones = [
+                '9h'  => ['time' => null, 'status' => 'MISSING'],
+                '14h' => ['time' => null, 'status' => 'MISSING'],
+                '16h' => ['time' => null, 'status' => 'MISSING'],
+                '21h' => ['time' => null, 'status' => 'MISSING'],
+            ];
 
-                $logs[] = [
-                    'rawCheckIn' => $rawCheckIn,
-                    'rawCheckOut' => $rawCheckOut,
-                    'isLateIn' => $att ? ($att->late_minutes > 0) : false,
-                    'isEarlyOut' => $att ? ($att->early_minutes > 0) : false,
-                ];
+            if ($emp->fingerprint_id) {
+                $fId = $emp->fingerprint_id;
+                // Lọc bằng == để bắt dính cả String lẫn Int
+                $empLogs = $timeLogsRaw->filter(function($log) use ($fId) {
+                    return $log->fingerprint_id == $fId;
+                })->sortBy('timestamp');
+
+                foreach ($empLogs as $log) {
+                    $time = Carbon::parse($log->timestamp);
+                    $minutes = $time->hour * 60 + $time->minute; 
+                    $formattedTime = $time->format('H:i');
+
+                    if ($minutes >= 420 && $minutes <= 660) {
+                        if (!$milestones['9h']['time']) {
+                            $milestones['9h']['time'] = $formattedTime;
+                            $milestones['9h']['status'] = ($minutes <= 555) ? 'ON_TIME' : 'LATE'; 
+                        }
+                    } elseif ($minutes >= 780 && $minutes <= 900) {
+                        if (!$milestones['14h']['time']) {
+                            $milestones['14h']['time'] = $formattedTime;
+                            $milestones['14h']['status'] = ($minutes <= 855) ? 'ON_TIME' : 'LATE'; 
+                        }
+                    } elseif ($minutes >= 901 && $minutes <= 1080) {
+                        if (!$milestones['16h']['time']) {
+                            $milestones['16h']['time'] = $formattedTime;
+                            $milestones['16h']['status'] = ($minutes <= 975) ? 'ON_TIME' : 'LATE'; 
+                        }
+                    } elseif ($minutes >= 1200 || $minutes <= 180) {
+                        if (!$milestones['21h']['time']) {
+                            $milestones['21h']['time'] = $formattedTime;
+                            $milestones['21h']['status'] = ($minutes <= 1275 && $minutes > 180) ? 'ON_TIME' : 'LATE'; 
+                        }
+                    }
+                }
             }
 
-            // --- XÉT TRẠNG THÁI ---
             $status = $att ? $att->status : 'absent';
             $isOverridden = $att ? (bool) $att->is_manually_adjusted : false;
 
@@ -221,13 +201,13 @@ class AttendanceController extends Controller
                     'reason' => $att->note ?? 'Đã chỉnh sửa thủ công',
                     'overriddenBy' => 'Quản lý'
                 ] : null,
-                'timeLogs' => empty($logs) ? [['rawCheckIn' => null, 'rawCheckOut' => null, 'isLateIn' => false, 'isEarlyOut' => false]] : $logs,
+                'milestones' => $milestones,
                 'personalInfo' => [
                     'fullName' => $emp->full_name,
                     'avatarUrl' => $emp->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($emp->full_name)
                 ],
                 'employment' => [
-                    'department' => $emp->branch_name ?? 'Chưa phân chi nhánh',
+                    'department' => $emp->department ?? 'Chưa phân tổ',
                     'role' => $emp->role ?? 'C0'
                 ]
             ];
@@ -243,22 +223,33 @@ class AttendanceController extends Controller
     public function override(Request $request)
     {
         $date = $request->input('date');
-        $empCode = $request->input('employeeId'); // EMP_001
+        $empCode = $request->input('employeeId'); 
         $newStatus = $request->input('newStatus');
         $reason = $request->input('reason');
         $reqTimeLogs = $request->input('timeLogs');
 
-        $emp = Employee::where('employee_code', $empCode)->first();
+        // 1. Tìm nhân viên cần ghi đè 
+        $emp = DB::table('employees')->where('employee_code', $empCode)->first();
         if (!$emp) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy nhân viên'], 404);
+        }
+
+        // 2. BẢO MẬT: Kiểm tra quyền
+        $user = auth()->user();
+        if ($user && in_array(strtoupper($user->role), ['C1', 'C2', '1', '2'])) {
+            $manager = DB::table('employees')->where('id', $user->employee_id)->first();
+            
+            if (!$manager || $manager->branch_id != $emp->branch_id) {
+                return response()->json(['success' => false, 'message' => 'Bạn không có quyền ghi đè chấm công của cơ sở khác!'], 403);
+            }
         }
 
         $schedule = DB::table('work_schedules')->where('date', $date)->where('employee_id', $emp->id)->first();
 
         DB::beginTransaction();
         try {
-            // 1. Cập nhật bảng Daily Attendances (Đã chốt)
-            $att = DailyAttendance::where('date', $date)->where('employee_id', $emp->id)->first();
+            // 3. Cập nhật bảng Daily Attendances
+            $att = DB::table('daily_attendances')->where('date', $date)->where('employee_id', $emp->id)->first();
 
             $attData = [
                 'employee_id' => $emp->id,
@@ -268,48 +259,71 @@ class AttendanceController extends Controller
                 'status' => $newStatus,
                 'is_manually_adjusted' => true,
                 'note' => $reason,
-                'updated_at' => now()
+                'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s') 
             ];
 
             if ($att) {
-                $att->update($attData);
+                DB::table('daily_attendances')->where('id', $att->id)->update($attData);
             } else {
-                $attData['created_at'] = now();
-                DailyAttendance::insert($attData);
+                $attData['created_at'] = \Carbon\Carbon::now()->format('Y-m-d H:i:s');
+                DB::table('daily_attendances')->insert($attData);
             }
 
-            // 2. Chèn Log giả lập vào bảng Time Logs (Nếu quản lý có sửa cả giờ)
-            if (is_array($reqTimeLogs) && $emp->fingerprint_id) {
+            // 4. Chèn Log giả lập vào bảng Time Logs
+            if (is_array($reqTimeLogs)) {
+                
+                // CẤP ID VÂN TAY
+                $fingerprintId = $emp->fingerprint_id ?? $emp->id;
+                if (!$emp->fingerprint_id) {
+                    DB::table('employees')->where('id', $emp->id)->update([
+                        'fingerprint_id' => $fingerprintId
+                    ]);
+                }
+
                 // Xóa log cũ của ngày hôm đó
                 DB::table('time_logs')
-                    ->where('fingerprint_id', $emp->fingerprint_id)
+                    ->where('fingerprint_id', $fingerprintId)
                     ->whereDate('timestamp', $date)
                     ->delete();
 
+                // KIỂM TRA MÁY CHẤM CÔNG (Giống hệt hàm Sync)
                 $machine = DB::table('timekeep_machines')->first();
-                $machineId = $machine ? $machine->id : 1; // Fallback máy chấm công ID = 1
+                if ($machine) {
+                    $machineId = $machine->id;
+                } else {
+                    $machineId = DB::table('timekeep_machines')->insertGetId([
+                        'name' => 'Máy giả lập (Override)',
+                        'branch_id' => $emp->branch_id,
+                        'status' => 'active',
+                        'created_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                        'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s')
+                    ]);
+                }
 
                 $insertLogs = [];
                 foreach ($reqTimeLogs as $log) {
                     if (!empty($log['rawCheckIn'])) {
+                        $timeIn = date('H:i:s', strtotime($log['rawCheckIn']));
                         $insertLogs[] = [
-                            'machine_id' => $machineId,
-                            'fingerprint_id' => $emp->fingerprint_id,
-                            'timestamp' => $date . ' ' . $log['rawCheckIn'] . ':00',
-                            'created_at' => now(),
-                            'updated_at' => now()
+                            'machine_id' => $machineId, // <--- SỬ DỤNG MACHINE CHUẨN XÁC
+                            'fingerprint_id' => $fingerprintId,
+                            'timestamp' => $date . ' ' . $timeIn,
+                            'created_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                            'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s')
                         ];
                     }
                     if (!empty($log['rawCheckOut'])) {
+                        $timeOut = date('H:i:s', strtotime($log['rawCheckOut']));
                         $insertLogs[] = [
-                            'machine_id' => $machineId,
-                            'fingerprint_id' => $emp->fingerprint_id,
-                            'timestamp' => $date . ' ' . $log['rawCheckOut'] . ':00',
-                            'created_at' => now(),
-                            'updated_at' => now()
+                            'machine_id' => $machineId, // <--- SỬ DỤNG MACHINE CHUẨN XÁC
+                            'fingerprint_id' => $fingerprintId,
+                            'timestamp' => $date . ' ' . $timeOut,
+                            'created_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                            'updated_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s')
                         ];
                     }
                 }
+                
                 if (!empty($insertLogs)) {
                     DB::table('time_logs')->insert($insertLogs);
                 }

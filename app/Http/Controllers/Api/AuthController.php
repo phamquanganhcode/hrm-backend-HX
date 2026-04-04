@@ -40,14 +40,19 @@ class AuthController extends Controller
 
             $token = $account->createToken('auth_token')->plainTextToken;
 
+            // THÊM ĐOẠN NÀY: Truy xuất Tên và Chi nhánh từ Employee
+            $emp = Employee::with('branch')->find($account->employee_id);
             // 🟢 ĐÃ SỬA: Không còn roleNumber (1, 2, 3). 
             // Trả về trực tiếp mã Role (C1, C2, C3) để Frontend xử lý điều hướng.
             return response()->json([
                 'token' => $token,
                 'user'  => [
-                    'id'       => $account->employee_id, 
-                    'username' => $account->username,
-                    'role'     => strtoupper($account->role), // Trả về 'C1', 'C2', 'C3'...
+                    'id'          => $account->employee_id, 
+                    'username'    => $account->username,
+                    'role'        => strtoupper($account->role),
+                    // Thêm 2 field Frontend đang cần:
+                    'full_name'   => $emp ? $emp->full_name : 'Quản lý',
+                    'branch_name' => ($emp && $emp->branch) ? "" . $emp->branch->name : 'Chưa phân chi nhánh',
                 ]
             ], 200);
             

@@ -14,19 +14,23 @@ class DepartmentController extends Controller
      */
     public function index()
     {
-        // Đọc dữ liệu trực tiếp từ bảng 'branches' của hệ thống thật
-        $branches = DB::table('branches')
-            ->whereNull('deleted_at') // Nếu bảng của bạn có dùng softDeletes
-            ->get();
+        $user = auth()->user(); 
+        $query = DB::table('employees')->select('department as name')->whereNotNull('department')->distinct();
 
-        $formatted = $branches->map(function ($b) {
-            return [
-                "id" => (string) $b->id, // Ép kiểu về chuỗi để React không bị lỗi
-                "name" => $b->name ?? 'Chưa có tên'
-            ];
+        // Lọc theo chi nhánh của Quản lý
+        if ($user && in_array(strtoupper($user->role), ['C1', 'C2', '1', '2'])) {
+            $manager = DB::table('employees')->where('id', $user->employee_id)->first();
+            if ($manager) {
+                $query->where('branch_id', $manager->branch_id);
+            }
+        }
+
+        // Format cho Frontend
+        $departments = $query->get()->map(function($item) {
+            return ['id' => $item->name, 'name' => $item->name];
         });
 
-        return response()->json($formatted, 200);
+        return response()->json($departments, 200);
     }
 
     /**

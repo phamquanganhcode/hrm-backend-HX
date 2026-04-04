@@ -59,6 +59,7 @@ class EmployeeSeeder extends Seeder
                 'phonenumber'   => $empData['personalInfo']['phone'],
                 'role'          => $cLevel, // Lưu chuỗi 'C2'
                 'branch_id'     => $branchId,
+                'department'    => $dept, // <--- THÊM DÒNG NÀY ĐỂ LƯU TỔ
                 'type'          => 'full',
                 'pay_grade_id'  => 1,
                 'status'        => 'Active',

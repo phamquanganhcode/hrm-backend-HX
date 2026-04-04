@@ -16,26 +16,21 @@ class EmployeeController extends Controller
         $user = auth()->user(); 
         $query = DB::table('employees')
             ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
-            ->select('employees.*', 'branches.name as branch_name')
+            // Lưu ý: Select cả cột department để hiển thị Tổ Bàn/Bếp
+            ->select('employees.*', 'branches.name as branch_name', 'employees.department as department')
             ->whereNull('employees.deleted_at');
 
-        // Nếu là Quản lý (C2), chỉ lấy nhân viên cùng chi nhánh
-        if ($user && in_array($user->role, ['C1', 'C2'])) {
+        // BỘ LỌC CƠ SỞ: Khóa chặt dữ liệu theo branch_id của Quản lý đang đăng nhập
+        if ($user && in_array(strtoupper($user->role), ['C1', 'C2', '1', '2'])) {
             $manager = DB::table('employees')->where('id', $user->employee_id)->first();
             if ($manager) {
-                // Chỉ lấy nhân viên cùng branch_id với Manager
                 $query->where('employees.branch_id', $manager->branch_id);
             }
         }
 
         $employees = $query->get();
 
-        // Format dữ liệu trả về cho Frontend
         $formatted = $employees->map(function ($e) {
-            $role = strtoupper($e->role);
-            if ($role === '1') $role = 'C1';
-            if ($role === '2') $role = 'C2';
-            if ($role === '3') $role = 'C3';
             return [
                 "id" => $e->employee_code,
                 "personalInfo" => [
@@ -44,13 +39,13 @@ class EmployeeController extends Controller
                     "avatarUrl" => $e->avatar_url
                 ],
                 "employment" => [
-                    "department" => $e->branch->name ?? "Chưa phân chi nhánh",
+                    "department" => $e->department ?? "Chưa phân tổ", 
                     "role" => $e->role,
                     "status" => $e->status,
                     "fixedOffDays" => []
                 ],
                 "systemConfigs" => [
-                    "isLeader" => in_array($e->role, ['C2', 'C3']),
+                    "isLeader" => in_array($e->role, ['C2', 'C3', '2', '3']),
                     "faceIdRegistered" => !empty($e->fingerprint_id)
                 ]
             ];
@@ -73,7 +68,7 @@ class EmployeeController extends Controller
 
         // 2. KIỂM TRA QUYỀN TRƯỚC KHI SỬA
         $user = auth()->user();
-        if ($user && in_array($user->role, ['C1', 'C2'])) {
+        if ($user && in_array(strtoupper($user->role), ['C1', 'C2', '1', '2'])) { // <--- Thêm strtoupper và 1, 2
             $currentEmp = DB::table('employees')->where('id', $user->employee_id)->first();
             // Nếu quản lý cố tình sửa nhân viên của chi nhánh khác -> Báo lỗi 403
             if ($currentEmp && $currentEmp->branch_id != $emp->branch_id) {
@@ -102,10 +97,7 @@ class EmployeeController extends Controller
         // 4. Xử lý logic chuyển đổi tên phòng ban (String) thành branch_id (Integer)
         $department = $request->input('employment.department', $request->department);
         if ($department) {
-            $branch = DB::table('branches')->where('name', $department)->first();
-            if ($branch) {
-                $updateData['branch_id'] = $branch->id;
-            }
+            $updateData['department'] = $department;
         }
 
         // 5. Cập nhật vào Database
@@ -124,7 +116,7 @@ class EmployeeController extends Controller
     {
         // Kiểm tra quyền (Admin mới được chuyển công tác giữa các chi nhánh)
         $user = auth()->user();
-        if ($user && !in_array($user->role, ['C3'])) {
+        if ($user && !in_array(strtoupper($user->role), ['C3', '3'])) { // <--- Thêm strtoupper và 3
             return response()->json(["success" => false, "message" => "Chỉ Giám đốc/Admin mới có quyền điều chuyển chi nhánh!"], 403);
         }
 
