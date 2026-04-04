@@ -127,17 +127,41 @@ class AttendanceController extends Controller
      */
     public function getByDate($date)
     {
-        // 1. Lấy tất cả nhân viên ĐƯỢC XẾP LỊCH ngày hôm đó
-        $schedules = DB::table('work_schedules')->where('date', $date)->whereNull('deleted_at')->get();
+        // 1. Xác định người đang đăng nhập & Chi nhánh của họ
+        $user = auth()->user();
+        // Lấy thông tin nhân viên gắn với tài khoản này
+        $currentEmp = DB::table('employees')->where('id', $user->employee_id)->first();
         
-        // 2. Lấy dữ liệu CHẤM CÔNG THỰC TẾ đã xử lý
-        $attendances = DB::table('daily_attendances')->where('date', $date)->whereNull('deleted_at')->get();
+        // 2. Khởi tạo Query cơ bản
+        $schedulesQuery = DB::table('work_schedules')->where('date', $date)->whereNull('deleted_at');
+        $attendancesQuery = DB::table('daily_attendances')->where('date', $date)->whereNull('deleted_at');
+
+        // 3. LOGIC PHÂN QUYỀN: Nếu là C1/C2 -> Chỉ lọc nhân viên thuộc chi nhánh mình quản lý
+        if ($user && in_array($user->role, ['C1', 'C2']) && $currentEmp) {
+            $branchId = $currentEmp->branch_id;
+
+            // Lọc lịch trình: Chỉ lấy lịch của nhân viên thuộc branch_id này
+            $schedulesQuery->whereExists(function ($query) use ($branchId) {
+                $query->select(DB::raw(1))
+                    ->from('employees')
+                    ->whereColumn('employees.id', 'work_schedules.employee_id')
+                    ->where('employees.branch_id', $branchId);
+            });
+
+            // Lọc chấm công: Chỉ lấy bản ghi chấm công tại chi nhánh này
+            $attendancesQuery->where('actual_branch_id', $branchId);
+        }
+
+        $schedules = $schedulesQuery->get();
+        $attendances = $attendancesQuery->get();
         $attDict = $attendances->keyBy('employee_id');
 
-        // Gộp danh sách những người có lịch HOẶC có đi làm (phòng trường hợp đi làm không xếp lịch)
-        $empIds = collect($schedules->pluck('employee_id'))->merge($attendances->pluck('employee_id'))->unique();
+        // 4. Xác định danh sách ID nhân viên cần hiển thị (Có lịch HOẶC có đi làm)
+        $empIds = collect($schedules->pluck('employee_id'))
+                    ->merge($attendances->pluck('employee_id'))
+                    ->unique();
 
-        // Lấy thông tin chi tiết của các nhân viên này
+        // 5. Lấy thông tin chi tiết nhân viên & Log quẹt thẻ
         $employees = DB::table('employees')
             ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
             ->whereIn('employees.id', $empIds)
@@ -145,7 +169,6 @@ class AttendanceController extends Controller
             ->get()
             ->keyBy('id');
 
-        // 3. Lấy LOG QUẸT THẺ (Từ máy chấm công)
         $fingerprintIds = $employees->pluck('fingerprint_id')->filter()->toArray();
         $timeLogsRaw = DB::table('time_logs')
             ->whereDate('timestamp', $date)
@@ -155,9 +178,6 @@ class AttendanceController extends Controller
             ->groupBy('fingerprint_id');
 
         $records = [];
-        $expectedHeadcount = count($schedules);
-        $actualHeadcount = 0;
-        $overrideCount = 0;
 
         foreach ($empIds as $empId) {
             $emp = $employees->get($empId);
@@ -166,13 +186,13 @@ class AttendanceController extends Controller
             $att = $attDict->get($empId);
             $sched = $schedules->firstWhere('employee_id', $empId);
 
-            // --- XỬ LÝ LOG QUẸT THẺ ---
+            // --- XỬ LÝ LOG QUẸT THẺ REALTIME ---
             $logs = [];
             $rawCheckIn = null;
             $rawCheckOut = null;
+            
             if ($emp->fingerprint_id && $timeLogsRaw->has($emp->fingerprint_id)) {
                 $empLogs = $timeLogsRaw->get($emp->fingerprint_id);
-                // Giờ quẹt đầu tiên và cuối cùng trong ngày
                 $minTime = $empLogs->min('timestamp');
                 $maxTime = $empLogs->max('timestamp');
                 
@@ -189,16 +209,10 @@ class AttendanceController extends Controller
 
             // --- XÉT TRẠNG THÁI ---
             $status = $att ? $att->status : 'absent';
-            if ($status !== 'absent' && $status !== 'Chờ duyệt') {
-                $actualHeadcount++;
-            }
             $isOverridden = $att ? (bool) $att->is_manually_adjusted : false;
-            if ($isOverridden) {
-                $overrideCount++;
-            }
 
             $records[] = [
-                'id' => $emp->employee_code, // ID dành cho Frontend
+                'id' => $emp->employee_code, 
                 'employeeId' => $emp->employee_code,
                 'shiftId' => (string) ($sched ? $sched->shift_id : 'Không rõ'),
                 'status' => $status,
@@ -210,11 +224,11 @@ class AttendanceController extends Controller
                 'timeLogs' => empty($logs) ? [['rawCheckIn' => null, 'rawCheckOut' => null, 'isLateIn' => false, 'isEarlyOut' => false]] : $logs,
                 'personalInfo' => [
                     'fullName' => $emp->full_name,
-                    'avatarUrl' => $emp->avatar_url ?? 'bg-blue-500'
+                    'avatarUrl' => $emp->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($emp->full_name)
                 ],
                 'employment' => [
                     'department' => $emp->branch_name ?? 'Chưa phân chi nhánh',
-                    'role' => $emp->role ?? ''
+                    'role' => $emp->role ?? 'C0'
                 ]
             ];
         }

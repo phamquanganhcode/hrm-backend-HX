@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        // Sửa provider của api thành accounts
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'accounts', 
+        ],
     ],
 
     /*
@@ -65,10 +70,11 @@ return [
             'model' => env('AUTH_MODEL', App\Models\Account::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        // THÊM CỤC NÀY VÀO ĐỂ KHAI BÁO MODEL ACCOUNT
+        'accounts' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Account::class, 
+        ],
     ],
 
     /*

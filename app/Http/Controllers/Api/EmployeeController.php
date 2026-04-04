@@ -13,19 +13,18 @@ class EmployeeController extends Controller
      */
     public function index()
     {
-        $user = auth()->user(); // Lấy Account đang đăng nhập
+        $user = auth()->user(); 
+        $query = DB::table('employees')
+            ->leftJoin('branches', 'employees.branch_id', '=', 'branches.id')
+            ->select('employees.*', 'branches.name as branch_name')
+            ->whereNull('employees.deleted_at');
 
-        // Khởi tạo query sử dụng Model Employee
-        $query = \App\Models\Employee::with('branch');
-
-        // Kiểm tra quyền: Chỉ Admin (C3) mới xem được hết
+        // Nếu là Quản lý (C2), chỉ lấy nhân viên cùng chi nhánh
         if ($user && in_array($user->role, ['C1', 'C2'])) {
-            // Lấy thông tin nhân viên của tài khoản này
-            $manager = $user->employee; 
-            
+            $manager = DB::table('employees')->where('id', $user->employee_id)->first();
             if ($manager) {
-                // Lọc nhân viên: Chỉ lấy những người thuộc cùng chi nhánh với Quản lý
-                $query->where('branch_id', $manager->branch_id);
+                // Chỉ lấy nhân viên cùng branch_id với Manager
+                $query->where('employees.branch_id', $manager->branch_id);
             }
         }
 
@@ -33,6 +32,10 @@ class EmployeeController extends Controller
 
         // Format dữ liệu trả về cho Frontend
         $formatted = $employees->map(function ($e) {
+            $role = strtoupper($e->role);
+            if ($role === '1') $role = 'C1';
+            if ($role === '2') $role = 'C2';
+            if ($role === '3') $role = 'C3';
             return [
                 "id" => $e->employee_code,
                 "personalInfo" => [
@@ -53,7 +56,7 @@ class EmployeeController extends Controller
             ];
         });
 
-        return response()->json($formatted);
+        return response()->json($formatted, 200);
     }
 
     /**

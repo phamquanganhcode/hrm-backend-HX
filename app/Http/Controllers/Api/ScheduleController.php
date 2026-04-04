@@ -28,97 +28,68 @@ class ScheduleController extends Controller
      * Lấy lịch làm việc của 1 ngày cụ thể
      * Tương đương: @app.get("/api/schedule/{date}")
      */
+    // app/Http/Controllers/Api/ScheduleController.php
+
     public function getByDate($date)
     {
-        // Join với bảng employees để lấy được mã employee_code trả về cho React
-        $schedules = DB::table('work_schedules')
-            ->join('employees', 'work_schedules.employee_id', '=', 'employees.id')
-            ->where('work_schedules.date', $date)
-            ->whereNull('work_schedules.deleted_at')
-            ->select('work_schedules.shift_id', 'employees.employee_code')
-            ->get();
+        $user = auth()->user();
+        $query = DB::table('work_schedules')->where('date', $date)->whereNull('deleted_at');
 
-        $assignments = $schedules->map(function ($s) {
-            return [
-                'employeeId' => $s->employee_code, // Phiên dịch: ID số -> Mã chuỗi
-                'shiftId' => (string) $s->shift_id
-            ];
+        if ($user && $user->role === 'C2') {
+            $manager = DB::table('employees')->where('id', $user->employee_id)->first();
+            if ($manager) {
+                $branchId = $manager->branch_id;
+                // Chỉ lấy lịch của nhân viên thuộc chi nhánh này
+                $query->whereExists(function ($q) use ($branchId) {
+                    $q->select(DB::raw(1))
+                    ->from('employees')
+                    ->whereColumn('employees.id', 'work_schedules.employee_id')
+                    ->where('employees.branch_id', $branchId);
+                });
+            }
+        }
+
+        $assignments = $query->get()->map(function($item) {
+            return [ 'employeeId' => $item->employee_id, 'shiftId' => $item->shift_id ];
         });
 
-        return response()->json([
-            'date' => $date,
-            'assignments' => $assignments
-        ], 200);
+        return response()->json(['date' => $date, 'assignments' => $assignments]);
     }
-
-    /**
-     * Cập nhật/Lưu lịch làm việc
-     * Tương đương: @app.post("/api/schedule/{date}")
-     */
     public function updateByDate(Request $request, $date)
     {
+        $user = auth()->user();
         $assignments = $request->input('assignments', []);
 
-        // 1. Chuẩn bị dữ liệu Mapping (Từ Mã Nhân viên chuỗi -> ID số thực tế)
-        $empCodes = collect($assignments)->pluck('employeeId')->unique()->toArray();
-        $employees = DB::table('employees')->whereIn('employee_code', $empCodes)->get()->keyBy('employee_code');
+        if ($user && $user->role === 'C2') {
+            $manager = DB::table('employees')->where('id', $user->employee_id)->first();
+            $branchId = $manager->branch_id;
 
-        // 2. Lấy hoặc Tự động tạo Kế hoạch tuần (weekly_plan) để không vi phạm khóa ngoại
-        $weeklyPlan = DB::table('weekly_plans')->first();
-        if ($weeklyPlan) {
-            $weeklyPlanId = $weeklyPlan->id;
-        } else {
-            // Tự động sinh ra 1 Kế hoạch tuần mặc định nếu trong DB chưa có
-            $weeklyPlanId = DB::table('weekly_plans')->insertGetId([
-                'name' => 'Kế hoạch tự động ' . Carbon::parse($date)->weekOfYear,
-                'start_date' => Carbon::parse($date)->startOfWeek(),
-                'end_date' => Carbon::parse($date)->endOfWeek(),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            DB::transaction(function() use ($date, $assignments, $branchId) {
+                // CHỈ XÓA lịch của những nhân viên thuộc chi nhánh này
+                DB::table('work_schedules')
+                    ->where('date', $date)
+                    ->whereExists(function ($q) use ($branchId) {
+                        $q->select(DB::raw(1))
+                        ->from('employees')
+                        ->whereColumn('employees.id', 'work_schedules.employee_id')
+                        ->where('employees.branch_id', $branchId);
+                    })
+                    ->delete();
+
+                // Chỉ chèn lịch mới (Nên có thêm bước kiểm tra ID nhân viên gửi lên có thuộc branchId không)
+                foreach ($assignments as $item) {
+                    DB::table('work_schedules')->insert([
+                        'date' => $date,
+                        'employee_id' => $item['employeeId'],
+                        'shift_id' => $item['shiftId'],
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            });
+            return response()->json(['message' => 'Cập nhật lịch thành công']);
         }
-
-        // Lấy Chi nhánh mặc định (đề phòng nhân viên chưa được phân chi nhánh)
-        $defaultBranch = DB::table('branches')->first();
-        $defaultBranchId = $defaultBranch ? $defaultBranch->id : 1;
-
-        DB::beginTransaction();
-        try {
-            // Xóa mềm toàn bộ lịch cũ của ngày này để xếp lại
-            DB::table('work_schedules')
-                ->where('date', $date)
-                ->whereNull('deleted_at')
-                ->update(['deleted_at' => now()]);
-
-            // Chuẩn bị mảng Insert mới
-            $insertData = [];
-            foreach ($assignments as $a) {
-                $emp = $employees->get($a['employeeId']);
-                if (!$emp) continue; // Bỏ qua nếu mã nhân viên bị lỗi
-
-                $insertData[] = [
-                    'weekly_plan_id' => $weeklyPlanId, // Ràng buộc khóa ngoại Kế hoạch
-                    'employee_id' => $emp->id,         // Ràng buộc khóa ngoại Nhân viên
-                    'shift_id' => $a['shiftId'],       // Ràng buộc khóa ngoại Ca làm
-                    'work_branch_id' => $emp->branch_id ?? $defaultBranchId, // Nhánh làm việc
-                    'date' => $date,
-                    'is_published' => 'Published',     // Đánh dấu là đã xuất bản thay vì Draft
-                    'status' => 'Scheduled',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-
-            if (!empty($insertData)) {
-                DB::table('work_schedules')->insert($insertData);
-            }
-
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Lưu lịch thành công'], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Lỗi lưu lịch: ' . $e->getMessage()], 500);
-        }
+        
+        return response()->json(['message' => 'Không có quyền thực hiện'], 403);
     }
 }

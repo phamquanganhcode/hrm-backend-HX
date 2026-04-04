@@ -7,18 +7,20 @@ use Illuminate\Http\Request;
 use App\Services\AuthService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\Account;
+use App\Models\Employee;
 
 class AuthController extends Controller
 {
     protected $authService;
 
-    // Inject AuthService vào Controller
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
     }
 
-public function login(Request $request)
+    public function login(Request $request)
     {
         $request->validate([
             'username' => 'required|string',
@@ -26,79 +28,65 @@ public function login(Request $request)
         ]);
 
         try {
-            $account = \App\Models\Account::where('username', $request->username)->first();
+            $account = Account::where('username', $request->username)->first();
 
             if (!$account) {
                 return response()->json(['message' => 'Tài khoản không tồn tại!'], 401);
             }
 
-            if (!\Illuminate\Support\Facades\Hash::check($request->password, $account->password)) {
+            if (!Hash::check($request->password, $account->password)) {
                 return response()->json(['message' => 'Sai mật khẩu!'], 401);
             }
 
             $token = $account->createToken('auth_token')->plainTextToken;
 
-            // 🟢 LÕI CỦA VẤN ĐỀ Ở ĐÂY: DỊCH C3, C2, C1 SANG 3, 2, 1 CHO FE
-            $roleNumber = 0; // Mặc định cho nhân viên thường
-            if ($account->role === 'C3') {
-                $roleNumber = 3; // Admin / Kế toán tổng
-            } elseif ($account->role === 'C2') {
-                $roleNumber = 2; // Quản lý cơ sở (Manager)
-            } elseif ($account->role === 'C1') {
-                $roleNumber = 1; // Kế toán chi nhánh (Accounting)
-            }
-            
-            // TRẢ VỀ THEO ĐÚNG FORMAT MÀ FRONTEND ĐANG CHỜ
+            // 🟢 ĐÃ SỬA: Không còn roleNumber (1, 2, 3). 
+            // Trả về trực tiếp mã Role (C1, C2, C3) để Frontend xử lý điều hướng.
             return response()->json([
                 'token' => $token,
                 'user'  => [
                     'id'       => $account->employee_id, 
                     'username' => $account->username,
-                    'role'     => $roleNumber, // Đã được map chuẩn 1, 2, 3
+                    'role'     => strtoupper($account->role), // Trả về 'C1', 'C2', 'C3'...
                 ]
             ], 200);
             
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Lỗi: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Lỗi hệ thống: ' . $e->getMessage()], 500);
         }
     }
 
     public function me(Request $request)
     {
         try {
-            // 1. Lấy Account đang đăng nhập
             $account = $request->user();
 
-            // 2. TÌM NHÂN VIÊN & EAGER LOADING TOÀN BỘ QUAN HỆ (Quan trọng nhất)
-            $employee = \App\Models\Employee::with([
-                'branch',                     // Nạp Chi nhánh hiện tại
-                'payGrade',                   // Nạp Bậc lương
-                'jobHistories.branch',        // Nạp Chi nhánh trong lịch sử
-                'jobHistories.position'       // Nạp Chức vụ trong lịch sử
+            $employee = Employee::with([
+                'branch',
+                'payGrade',
+                'jobHistories.branch',
+                'jobHistories.position'
             ])->find($account->employee_id);
 
             if (!$employee) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Không tìm thấy hồ sơ nhân viên này!'
+                    'message' => 'Không tìm thấy hồ sơ nhân viên!'
                 ], 404);
             }
 
-            // 3. XỬ LÝ DỮ LIỆU ĐỂ KHỚP VỚI FRONTEND YÊU CẦU
-
-            // Dịch Role (C0, C1...) sang Tiếng Việt
+            // Dịch tên hiển thị (Chỉ dùng để hiển thị trên UI)
             $roleNameVN = 'Nhân viên';
-            $empRole = $employee->role;
-            if ($empRole === 'C3') $roleNameVN = 'Giám đốc / Chuyên gia';
-            elseif ($empRole === 'C2') $roleNameVN = 'Quản lý cơ sở';
-            elseif ($empRole === 'C1') $roleNameVN = 'Thu ngân / Kế toán';
-            elseif ($empRole === 'C0') $roleNameVN = 'Nhân viên Bàn/Bếp';
+            $empRoleCode = strtoupper($employee->role);
+            
+            if ($empRoleCode === 'C3') $roleNameVN = 'Giám đốc / Chuyên gia';
+            elseif ($empRoleCode === 'C2') $roleNameVN = 'Quản lý cơ sở';
+            elseif ($empRoleCode === 'C1') $roleNameVN = 'Thu ngân / Kế toán';
+            elseif ($empRoleCode === 'C0') $roleNameVN = 'Nhân viên Bàn/Bếp';
 
-            // Xử lý Type (full/part)
             $dbType = strtolower($employee->type ?? 'part');
             $employmentType = str_contains($dbType, 'full') ? 'full' : 'part';
 
-            // Định dạng mảng Lịch sử công tác (Lấy đúng branch_name và position_name)
             $jobHistoryFormatted = $employee->jobHistories->map(function($history) {
                 return [
                     'id'            => $history->id,
@@ -109,35 +97,29 @@ public function login(Request $request)
                 ];
             })->toArray();
 
-            // 4. ĐÓNG GÓI JSON ĐÚNG 100% CẤU TRÚC YÊU CẦU
+            // 🟢 ĐÃ CẬP NHẬT CẤU TRÚC: Trả về mã Role thay vì tên tiếng Việt vào trường 'role'
+            // để tránh lỗi điều hướng khi FE gọi API /me để cập nhật lại thông tin user.
             $responseData = [
                 'id'            => $employee->id,
                 'full_name'     => $employee->full_name,
                 'employee_code' => $employee->employee_code,
-                'status'        => strtolower($employee->status), // 'active'
-                'role'          => $roleNameVN,
+                'status'        => strtolower($employee->status),
+                'role'          => $empRoleCode, // 'C1', 'C2', 'C3'
+                'role_display'  => $roleNameVN, // Dùng trường này nếu FE muốn hiện chữ "Quản lý cơ sở"
                 'branch_id'     => $employee->branch_id,
-                
-                // Object branch lồng bên trong
                 'branch'        => $employee->branch ? [
                     'id'      => $employee->branch->id,
                     'name'    => $employee->branch->name,
                     'address' => $employee->branch->address,
                 ] : null,
-
                 'type'          => $employmentType,
-                // Ép kiểu lương về dạng số thực/số nguyên
                 'base_salary'   => $employee->payGrade ? (float)$employee->payGrade->base_salary : 0, 
-                
                 'phonenumber'   => $employee->phonenumber,
                 'email'         => $employee->email,
-                'avatar_url'    => $employee->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($employee->full_name) . '&background=random',
-                
-                // Array lịch sử công tác
+                'avatar_url'    => $employee->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($employee->full_name),
                 'job_history'   => $jobHistoryFormatted
             ];
 
-            // 5. TRẢ VỀ FRONTEND VỚI FORMAT { status: 'success', data: { employee: {...} } }
             return response()->json([
                 'status' => 'success',
                 'data'   => [
@@ -148,7 +130,7 @@ public function login(Request $request)
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Lỗi máy chủ nội bộ: ' . $e->getMessage()
+                'message' => 'Lỗi máy chủ: ' . $e->getMessage()
             ], 500);
         }
     }
